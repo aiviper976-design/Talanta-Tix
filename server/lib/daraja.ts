@@ -51,9 +51,10 @@ export const DISABLED_MESSAGE = "Daraja payment requests are disabled until the 
 
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
+  if (/^[17]\d{8}$/.test(digits)) return `254${digits}`;
   if (/^0[17]\d{8}$/.test(digits)) return `254${digits.slice(1)}`;
   if (/^254[17]\d{8}$/.test(digits)) return digits;
-  throw new Error("Enter a valid Kenyan M-Pesa number beginning with 01 or 07.");
+  throw new Error("Enter a valid Kenyan M-Pesa number in 7…, 07…, 1…, 01…, or 254… format.");
 }
 
 export function formatTimestamp(date = new Date()): string {

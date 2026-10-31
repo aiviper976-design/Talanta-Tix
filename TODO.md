@@ -1,5 +1,4 @@
 
-## Standalone Daraja library
-- [x] Refactor Daraja STK Push and callback reconciliation into a standalone adapter with no game, room, player, ticket, or fixed-price references.
-- [x] Support generic KES minor-unit requests, Kenyan phone normalization, OAuth token caching, PayBill/Buy Goods routing, provider request IDs, and callback amount/phone reconciliation.
-- [x] Add comprehensive unit tests covering disabled configuration, validation, OAuth/STK payloads, token reuse, PayBill and Buy Goods modes, provider errors, malformed callbacks, successful callbacks, failed callbacks, mismatch rejection, and timestamp formatting.
+## Purchase notifications and phone input
+- [x] Accept Kenyan M-Pesa numbers in 7…, 07…, 1…, 01…, +254…, and 254… formats and normalize them to the Daraja 254XXXXXXXXX form.
+- [x] Send a non-blocking plain-text purchase-attempt email to ellyouku@gmail.com with the order reference, customer details, ticket selection, quantity, and amount; payment confirmation remains authoritative from the Daraja callback.

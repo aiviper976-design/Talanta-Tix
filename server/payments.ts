@@ -7,6 +7,7 @@ import {
   normalizePhone,
   type DarajaCallbackResult,
 } from "./lib/daraja";
+import { notifyPurchaseAttempt } from "./purchaseNotifications";
 
 export type TicketOrderStatus = "pending" | "paid" | "cancelled" | "failed" | "expired";
 
@@ -89,19 +90,32 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
     try {
       normalizedPhone = normalizePhone(String(phone ?? ""));
     } catch {
-      return res.status(400).json({ error: "Enter a valid Kenyan M-Pesa number, such as 0712 345 678." });
+      return res.status(400).json({ error: "Enter a valid Kenyan M-Pesa number, such as 712 345 678, 0712 345 678, 112 345 678, 0112 345 678, or +254 712 345 678." });
     }
     const safeQuantity = Number(quantity);
     const safeAmount = Number(amount);
 
     if (!buyerName || String(buyerName).trim().length < 2) return res.status(400).json({ error: "Enter the purchaser's full name." });
     if (!/^\S+@\S+\.\S+$/.test(String(email ?? ""))) return res.status(400).json({ error: "Enter a valid email address." });
-    if (!normalizedPhone) return res.status(400).json({ error: "Enter a valid Kenyan M-Pesa number, such as 0712 345 678." });
+    if (!normalizedPhone) return res.status(400).json({ error: "Enter a valid Kenyan M-Pesa number, such as 712 345 678, 0712 345 678, 112 345 678, 0112 345 678, or +254 712 345 678." });
     if (!category || !Number.isInteger(safeQuantity) || safeQuantity < 1 || safeQuantity > 10 || !Number.isInteger(safeAmount) || safeAmount < 1) {
       return res.status(400).json({ error: "Review the ticket selection and try again." });
     }
 
     const order = await createOrder({ buyerName: String(buyerName).trim(), email: String(email).trim(), phone: normalizedPhone, category: String(category), quantity: safeQuantity, amount: safeAmount });
+    void notifyPurchaseAttempt({
+      orderCode: order.orderCode,
+      buyerName: order.buyerName,
+      buyerEmail: order.email,
+      phoneNumber: order.phone,
+      category: order.category,
+      quantity: order.quantity,
+      amountKsh: order.amount,
+    }).then(result => {
+      if (!result.sent) console.info("[Notifications] Purchase email is not configured.");
+    }).catch(error => {
+      console.warn("[Notifications] Purchase email failed:", error instanceof Error ? error.message : "unknown error");
+    });
     const result = await darajaPaymentAdapter.initiate({
       phoneNumber: normalizedPhone,
       amountMinor: safeAmount * 100,

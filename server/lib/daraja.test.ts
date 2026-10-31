@@ -28,9 +28,11 @@ function makeAdapter(fetchImpl: typeof fetch) {
 
 describe("normalizePhone", () => {
   it.each([
+    ["712 345 678", "254712345678"],
     ["0712 345 678", "254712345678"],
-    ["+254 712-345-678", "254712345678"],
+    ["112 345 678", "254112345678"],
     ["0112 345 678", "254112345678"],
+    ["+254 712-345-678", "254712345678"],
     ["254712345678", "254712345678"],
   ])("normalizes %s to %s", (input, expected) => {
     expect(normalizePhone(input)).toBe(expected);
