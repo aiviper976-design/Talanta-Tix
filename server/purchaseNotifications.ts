@@ -1,8 +1,8 @@
-import nodemailer from "nodemailer";
+import { notifyOwner } from "./_core/notification";
 
-const DEFAULT_NOTIFICATION_EMAIL = "ellyouku@gmail.com";
+const DEFAULT_NOTIFICATION_TITLE = "Talanta Tix — ticket purchase attempt";
 
-type PurchaseAttempt = {
+export type PurchaseAttempt = {
   orderCode: string;
   buyerName: string;
   buyerEmail: string;
@@ -12,11 +12,9 @@ type PurchaseAttempt = {
   amountKsh: number;
 };
 
-export type PurchaseNotificationResult =
-  | { sent: true; messageId?: string }
-  | { sent: false; reason: "not_configured" };
+export type PurchaseNotificationResult = { sent: boolean };
 
-function purchaseAttemptText(attempt: PurchaseAttempt, attemptedAt = new Date()): string {
+export function purchaseAttemptText(attempt: PurchaseAttempt, attemptedAt = new Date()): string {
   return [
     "Talanta Tix — ticket purchase attempt",
     "",
@@ -38,23 +36,11 @@ function purchaseAttemptText(attempt: PurchaseAttempt, attemptedAt = new Date())
 }
 
 export async function notifyPurchaseAttempt(attempt: PurchaseAttempt): Promise<PurchaseNotificationResult> {
-  const password = process.env.PURCHASE_NOTIFICATION_GMAIL_APP_PASSWORD;
-  if (!password) return { sent: false, reason: "not_configured" };
-
-  const recipient = process.env.PURCHASE_NOTIFICATION_EMAIL || DEFAULT_NOTIFICATION_EMAIL;
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: { user: recipient, pass: password },
-  });
-  const result = await transporter.sendMail({
-    from: recipient,
-    to: recipient,
-    subject: `Ticket purchase attempt — ${attempt.orderCode}`,
-    text: purchaseAttemptText(attempt),
-  });
-  return { sent: true, messageId: result.messageId };
+  try {
+    const sent = await notifyOwner({ title: DEFAULT_NOTIFICATION_TITLE, content: purchaseAttemptText(attempt) });
+    return { sent };
+  } catch (error) {
+    console.warn("[Notifications] Purchase attempt notification failed:", error instanceof Error ? error.message : "unknown error");
+    return { sent: false };
+  }
 }
-
-export { purchaseAttemptText };

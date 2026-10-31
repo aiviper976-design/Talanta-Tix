@@ -112,9 +112,9 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
       quantity: order.quantity,
       amountKsh: order.amount,
     }).then(result => {
-      if (!result.sent) console.info("[Notifications] Purchase email is not configured.");
+      if (!result.sent) console.info("[Notifications] Manus owner notification was not accepted.");
     }).catch(error => {
-      console.warn("[Notifications] Purchase email failed:", error instanceof Error ? error.message : "unknown error");
+      console.warn("[Notifications] Manus owner notification failed:", error instanceof Error ? error.message : "unknown error");
     });
     const result = await darajaPaymentAdapter.initiate({
       phoneNumber: normalizedPhone,

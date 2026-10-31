@@ -1,7 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { notifyPurchaseAttempt, purchaseAttemptText } from "./purchaseNotifications";
-
-afterEach(() => vi.unstubAllEnvs());
+import { describe, expect, it } from "vitest";
+import { purchaseAttemptText } from "./purchaseNotifications";
 
 describe("purchase notifications", () => {
   const attempt = {
@@ -25,10 +23,5 @@ describe("purchase notifications", () => {
     expect(text).toContain("Category: Early Bird");
     expect(text).toContain("Quantity: 2");
     expect(text).toContain("Amount: KSh 1,000");
-  });
-
-  it("degrades safely when the Gmail app password is not configured", async () => {
-    vi.stubEnv("PURCHASE_NOTIFICATION_GMAIL_APP_PASSWORD", "");
-    await expect(notifyPurchaseAttempt(attempt)).resolves.toEqual({ sent: false, reason: "not_configured" });
   });
 });
