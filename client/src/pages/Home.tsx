@@ -246,7 +246,7 @@ export default function Home() {
       </main>
 
       <footer className="lean-footer">
-        <div className="page-width lean-footer-inner"><span>Talanta Tix · Bayern Munich vs Ajax</span><span className="footer-contact"><a href="mailto:vipertechs@outlook.com"><Mail size={14} /> vipertechs@outlook.com</a><a href="tel:+254713443577"><Phone size={14} /> 0713 443 577</a></span></div>
+        <div className="page-width lean-footer-inner"><span>Talanta Tix · Bayern Munich vs Ajax</span><span className="footer-contact"><a className="temporary-test-link" href="/test-checkout">Run KSh 1 test</a><a href="mailto:vipertechs@outlook.com"><Mail size={14} /> vipertechs@outlook.com</a><a href="tel:+254713443577"><Phone size={14} /> 0713 443 577</a></span></div>
       </footer>
 
       {checkoutOpen && (
