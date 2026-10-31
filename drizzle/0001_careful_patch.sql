@@ -1,0 +1,20 @@
+CREATE TABLE `orders` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`orderCode` varchar(32) NOT NULL,
+	`buyerName` varchar(160) NOT NULL,
+	`email` varchar(320) NOT NULL,
+	`phone` varchar(16) NOT NULL,
+	`category` varchar(80) NOT NULL,
+	`quantity` int NOT NULL,
+	`amount` int NOT NULL,
+	`status` enum('pending','paid','cancelled','failed','expired') NOT NULL DEFAULT 'pending',
+	`merchantRequestId` varchar(128),
+	`checkoutRequestId` varchar(128),
+	`mpesaReceiptNumber` varchar(64),
+	`resultCode` int,
+	`resultDescription` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `orders_id` PRIMARY KEY(`id`),
+	CONSTRAINT `orders_orderCode_unique` UNIQUE(`orderCode`)
+);
