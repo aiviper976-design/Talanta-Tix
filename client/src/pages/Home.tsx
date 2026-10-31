@@ -162,13 +162,10 @@ export default function Home() {
           <div className="lean-hero-glow" aria-hidden="true" />
           <div className="lean-hero-inner page-width">
             <div className="lean-hero-copy">
-              <div className="reference-kicker">Talanta Sports City · Nairobi · Kenya</div>
-              <h1>BAyern Munich<br /><span>vs Ajax</span></h1>
-              <div className="lean-crests" aria-label="Bayern Munich versus Ajax">
-                <div className="crest crest-bayern">FCB</div><b>VS</b><div className="crest crest-ajax">AFC</div>
-              </div>
-              <div className="lean-date">5 JANUARY 2027</div>
-              <p>Raila Odinga International Stadium</p>
+              <div className="reference-kicker">RAILA ODINGA INTERNATIONAL STADIUM<br /><span>AT TALANTA SPORTS CITY</span><small>NAIROBI · KENYA</small></div>
+              <h1>BAYERN<br />MUNICH <b>VS</b><br /><span>AJAX</span></h1>
+              <div className="lean-date">5TH JANUARY 2027</div>
+              <p>EARLY BIRD TICKETS FROM KSh 500</p>
               <button className="hero-buy" onClick={scrollToTickets}>Get tickets <ArrowUpRight size={18} /></button>
             </div>
             <figure className="lean-match-art">
