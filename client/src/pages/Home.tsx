@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   Check,
+  Download,
   LockKeyhole,
   Mail,
   Menu,
@@ -14,6 +15,7 @@ import {
   Ticket,
   X,
 } from "lucide-react";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 
 type TicketOption = {
@@ -36,6 +38,7 @@ const ticketOptions: TicketOption[] = [
 ];
 
 const formatKes = (value: number) => `KSh ${value.toLocaleString("en-KE")}`;
+const makeIdempotencyKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 function TicketMark({ small = false }: { small?: boolean }) {
   return (
@@ -53,6 +56,9 @@ export default function Home() {
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [ticketCode, setTicketCode] = useState<string | null>(null);
+  const [ticketToken, setTicketToken] = useState<string | null>(null);
+  const [ticketQr, setTicketQr] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState(makeIdempotencyKey);
   const [paymentMessage, setPaymentMessage] = useState("");
   const [form, setForm] = useState({ buyerName: "", email: "", phone: "" });
 
@@ -74,6 +80,9 @@ export default function Home() {
     setPaymentMessage("");
     setOrderCode(null);
     setTicketCode(null);
+    setTicketToken(null);
+    setTicketQr(null);
+    setIdempotencyKey(makeIdempotencyKey());
   };
 
   const startPayment = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -84,7 +93,7 @@ export default function Home() {
       const response = await fetch("/api/orders/stk-push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, category: selected.name, quantity, amount: total }),
+        body: JSON.stringify({ ...form, category: selected.name, quantity, amount: total, idempotencyKey }),
       });
       const contentType = response.headers.get("content-type") || "";
       const body = contentType.includes("application/json")
@@ -92,8 +101,15 @@ export default function Home() {
         : { error: `The payment service returned an unexpected response (${response.status}). Refresh the page and try again.` };
       if (!response.ok) throw new Error(body.error || "We could not start the payment prompt.");
       setOrderCode(body.orderCode);
-      setPaymentState("pending");
-      setPaymentMessage("Check your phone and enter your M-Pesa PIN to approve the ticket order.");
+      setTicketToken(body.ticketToken ?? null);
+      if (body.status === "paid") {
+        setTicketCode(body.ticketCode ?? null);
+        setPaymentState("paid");
+        setPaymentMessage(body.receipt ? `M-Pesa receipt ${body.receipt}` : "Your payment has been confirmed.");
+      } else {
+        setPaymentState("pending");
+        setPaymentMessage("Check your phone and enter your M-Pesa PIN to approve the ticket order.");
+      }
     } catch (error) {
       setPaymentState("failed");
       setPaymentMessage(error instanceof Error ? error.message : "We could not start the payment prompt.");
@@ -110,6 +126,7 @@ export default function Home() {
         if (body.status === "paid") {
           setPaymentState("paid");
           setTicketCode(body.ticketCode);
+          setTicketToken(body.ticketToken);
           setPaymentMessage(body.receipt ? `M-Pesa receipt ${body.receipt}` : "Your payment has been confirmed.");
           window.clearInterval(timer);
         }
@@ -137,6 +154,29 @@ export default function Home() {
       window.clearTimeout(timeout);
     };
   }, [paymentState, orderCode]);
+
+  useEffect(() => {
+    if (paymentState !== "paid" || !ticketToken) {
+      setTicketQr(null);
+      return;
+    }
+    let active = true;
+    QRCode.toDataURL(`${window.location.origin}/api/tickets/${ticketToken}`, { width: 260, margin: 1, color: { dark: "#111111", light: "#ffffff" } })
+      .then(dataUrl => { if (active) setTicketQr(dataUrl); })
+      .catch(() => { if (active) setTicketQr(null); });
+    return () => { active = false; };
+  }, [paymentState, ticketToken]);
+
+  const downloadTicket = () => {
+    if (!ticketQr || !ticketCode || !orderCode) return;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Talanta Tix ${ticketCode}</title><style>body{font-family:Arial,sans-serif;background:#f5f2ec;color:#111;padding:32px;max-width:520px;margin:auto}.ticket{background:#111;color:#fff;padding:28px;border-top:8px solid #f2c335}h1{font-size:28px;margin:0 0 6px}p{color:#cfcfcf}.code{font:700 22px monospace;color:#f2c335;margin:24px 0 8px}.qr{background:#fff;padding:14px;text-align:center;margin-top:24px}.qr img{width:220px;max-width:100%}.meta{border-top:1px solid #444;margin-top:20px;padding-top:14px;line-height:1.7;color:#ddd}</style></head><body><div class="ticket"><h1>Bayern Munich vs Ajax</h1><p>5 January 2027 · Raila Odinga International Stadium, Nairobi</p><div class="code">${ticketCode}</div><div>${selected.name} · ${quantity} ticket${quantity > 1 ? "s" : ""}</div><div class="meta">Order: ${orderCode}<br>Total paid: ${formatKes(total)}<br>Scan the QR code to verify this ticket.</div><div class="qr"><img src="${ticketQr}" alt="Ticket verification QR code"></div></div></body></html>`;
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `talanta-tix-${ticketCode}.html`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="site-shell lean-site">
@@ -226,7 +266,7 @@ export default function Home() {
                 <Button type="submit" className="checkout-button payment-submit-button" disabled={paymentState === "starting"}>{paymentState === "starting" ? "Processing…" : "Pay"}<ArrowUpRight size={17} /></Button>
               </form>
               <div className="modal-footnote"><ShieldCheck size={14} /> Daraja credentials stay on the server. Confirmation comes from the Safaricom callback.</div>
-            </> : paymentState === "pending" ? <div className="payment-state payment-pending"><div className="state-icon"><Smartphone size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Waiting for approval</div><h2>Check your <em>phone.</em></h2><p>{paymentMessage}</p><div className="pending-loader"><span /><span /><span /></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><button className="quiet-button" onClick={() => { setPaymentState("cancelled"); setPaymentMessage("The prompt was stopped on this screen. If you already approved it, wait for the callback or contact support with your reference."); }}>I didn’t approve</button></div> : paymentState === "paid" ? <div className="payment-state payment-success"><div className="state-icon success-icon"><Check size={30} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment confirmed</div><h2>See you at <em>Talanta.</em></h2><p>{paymentMessage}</p><div className="digital-ticket"><span className="mini-label">DIGITAL TICKET</span><strong>{ticketCode}</strong><span>{selected.name} · {quantity} ticket{quantity > 1 ? "s" : ""}</span><span>05 JAN 2027 · NAIROBI</span></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><Button className="checkout-button" onClick={resetCheckout}>Done</Button></div> : <div className="payment-state payment-cancelled"><div className="state-icon"><X size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment not completed</div><h2>Try again.</h2><p>{paymentMessage}</p><Button className="checkout-button" onClick={() => { setPaymentState("idle"); setPaymentMessage(""); }}>Try again</Button></div>}
+            </> : paymentState === "pending" ? <div className="payment-state payment-pending"><div className="state-icon"><Smartphone size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Waiting for approval</div><h2>Check your <em>phone.</em></h2><p>{paymentMessage}</p><div className="pending-loader"><span /><span /><span /></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><button className="quiet-button" onClick={() => { setPaymentState("cancelled"); setPaymentMessage("The prompt was stopped on this screen. If you already approved it, wait for the callback or contact support with your reference."); }}>I didn’t approve</button></div> : paymentState === "paid" ? <div className="payment-state payment-success"><div className="state-icon success-icon"><Check size={30} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment confirmed</div><h2>See you at <em>Talanta.</em></h2><p>{paymentMessage}</p><div className="digital-ticket"><span className="mini-label">DIGITAL TICKET</span><strong>{ticketCode}</strong><span>{selected.name} · {quantity} ticket{quantity > 1 ? "s" : ""}</span><span>05 JAN 2027 · NAIROBI</span>{ticketQr && <img className="ticket-qr" src={ticketQr} alt="QR code for ticket verification" />}</div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><div className="ticket-actions"><Button className="checkout-button" onClick={downloadTicket} disabled={!ticketQr}><Download size={16} /> Download ticket</Button>{ticketToken && <a className="ticket-verify-link" href={`/api/tickets/${ticketToken}`} target="_blank" rel="noreferrer">Verify ticket</a>}</div><Button className="quiet-button" onClick={resetCheckout}>Done</Button></div> : <div className="payment-state payment-cancelled"><div className="state-icon"><X size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment not completed</div><h2>Try again.</h2><p>{paymentMessage}</p><Button className="checkout-button" onClick={() => { setPaymentState("idle"); setPaymentMessage(""); setIdempotencyKey(makeIdempotencyKey()); }}>Try again</Button></div>}
           </div>
         </div>
       )}
