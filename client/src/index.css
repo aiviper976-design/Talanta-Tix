@@ -49,8 +49,12 @@ a { color: inherit; text-decoration: none; }
 .hero-section::before { content: ""; position: absolute; z-index: -2; inset: 0; background: radial-gradient(circle at 73% 26%, rgba(255,90,54,.21), transparent 27%), radial-gradient(circle at 93% 74%, rgba(240,189,73,.12), transparent 20%); }
 .hero-section::after { content: ""; position: absolute; z-index: -1; right: -9%; top: -18%; width: 59vw; height: 59vw; border: 1px solid rgba(255,255,255,.11); border-radius: 50%; box-shadow: 0 0 0 55px rgba(255,255,255,.025), 0 0 0 110px rgba(255,255,255,.018); }
 .hero-grid-lines { position: absolute; inset: 0; opacity: .32; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 80px 80px; mask-image: linear-gradient(90deg, black, transparent 72%); }
-.hero-content { min-height: 615px; display: grid; grid-template-columns: 1fr 31%; align-items: center; padding-top: 68px; }
+.hero-content { min-height: 615px; display: grid; grid-template-columns: 1fr 31%; align-items: center; padding-top: 68px; position: relative; }
 .hero-copy { max-width: 650px; padding: 55px 0 20px; }
+.hero-match-image { position: absolute; z-index: -1; top: 138px; right: 11%; width: min(440px, 42vw); margin: 0; transform: rotate(2deg); filter: saturate(.9); }
+.hero-match-image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--ink) 0%, transparent 28%, transparent 80%, rgba(20,20,20,.2) 100%), linear-gradient(0deg, var(--ink) 0%, transparent 24%); }
+.hero-match-image img { display: block; width: 100%; aspect-ratio: 1.6026; object-fit: cover; border: 1px solid rgba(255,255,255,.24); opacity: .58; }
+.hero-match-image figcaption { position: absolute; z-index: 1; bottom: 10px; left: 14px; color: rgba(255,255,255,.63); font: 9px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
 .eyebrow { display: flex; align-items: center; gap: 10px; font: 10px/1 "IBM Plex Mono", monospace; letter-spacing: .15em; text-transform: uppercase; color: var(--muted-ink); }
 .eyebrow.light { color: rgba(255,255,255,.65); }
 .eyebrow-line { width: 27px; height: 1px; background: currentColor; display: inline-block; }
@@ -126,6 +130,10 @@ a { color: inherit; text-decoration: none; }
 .radio-mark-on { background: var(--orange); }
 .price-footnote { display: flex; gap: 8px; align-items: flex-start; color: var(--muted-ink); font-size: 11px; line-height: 1.4; padding: 6px 4px; }
 .price-footnote svg { flex: 0 0 auto; margin-top: 1px; }
+.ticket-atmosphere { margin: 13px 0 0; position: relative; overflow: hidden; }
+.ticket-atmosphere img { display: block; width: 100%; height: 148px; object-fit: cover; object-position: center 58%; filter: saturate(.75) contrast(.95); }
+.ticket-atmosphere::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(20,20,20,.65), transparent 55%); pointer-events: none; }
+.ticket-atmosphere figcaption { position: absolute; z-index: 1; left: 14px; bottom: 11px; color: #fff; font: 9px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
 .order-card { background: var(--ink); color: #fff; padding: 25px; position: sticky; top: 20px; box-shadow: 14px 14px 0 var(--paper-deep); }
 .order-card-top { display: flex; align-items: center; justify-content: space-between; }
 .order-card .eyebrow { color: rgba(255,255,255,.55); }
@@ -159,6 +167,9 @@ a { color: inherit; text-decoration: none; }
 .venue-card::after { content: ""; position: absolute; z-index: -1; width: 520px; height: 520px; right: -80px; top: -30px; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; box-shadow: 0 0 0 36px rgba(255,255,255,.025), 0 0 0 73px rgba(255,255,255,.025), 0 0 0 110px rgba(255,255,255,.018); }
 .venue-card h2 { font-size: clamp(43px, 5vw, 66px); }
 .venue-card-copy { position: relative; z-index: 2; max-width: 540px; }
+.venue-match-image { position: absolute; z-index: 1; right: 4%; bottom: 34px; width: 265px; margin: 0; transform: rotate(-3deg); }
+.venue-match-image img { display: block; width: 100%; aspect-ratio: 1.7794; object-fit: cover; border: 1px solid rgba(255,255,255,.35); opacity: .72; }
+.venue-match-image figcaption { color: rgba(255,255,255,.54); font: 9px "IBM Plex Mono", monospace; letter-spacing: .11em; margin-top: 8px; text-transform: uppercase; }
 .venue-card p { color: rgba(255,255,255,.63); max-width: 410px; line-height: 1.6; font-size: 13px; margin: 27px 0 22px; }
 .venue-meta { display: flex; flex-wrap: wrap; gap: 20px; font: 10px "IBM Plex Mono", monospace; color: rgba(255,255,255,.75); margin-bottom: 31px; }
 .venue-meta span { display: flex; align-items: center; gap: 7px; }
@@ -233,17 +244,17 @@ details p { color: var(--muted-ink); font-size: 12px; line-height: 1.65; max-wid
 
 @media (max-width: 900px) {
   .header-inner { gap: 25px; }.main-nav { gap: 17px; }.header-status { display: none; }
-  .hero-content { grid-template-columns: 1fr 34%; }.hero-date-rail { padding-left: 26px; }.date-number { font-size: 110px; }
+  .hero-content { grid-template-columns: 1fr 34%; }.hero-match-image { right: 8%; width: 48vw; }.hero-date-rail { padding-left: 26px; }.date-number { font-size: 110px; }
   .ticket-layout { grid-template-columns: 1fr 330px; gap: 35px; }.order-card { padding: 21px; }
   .venue-mark { right: 2%; opacity: .8; }
 }
 @media (max-width: 700px) {
   .page-width { width: min(100% - 34px, 560px); }.header-inner { width: calc(100% - 34px); height: 70px; }.header-cta { display: none; }.mobile-menu { display: block; margin-left: auto; }.main-nav { display: none; position: absolute; top: 70px; left: 0; right: 0; background: var(--ink); border-top: 1px solid var(--white-line); padding: 18px; flex-direction: column; align-items: flex-start; }.main-nav-open { display: flex; }.main-nav button { padding: 7px 0; }
-  .hero-section { min-height: 710px; }.hero-content { min-height: 640px; display: flex; flex-direction: column; align-items: stretch; padding-top: 110px; }.hero-copy { padding: 28px 0 15px; }.hero-copy h1 { font-size: clamp(55px, 17vw, 78px); }.hero-intro { font-size: 15px; }.hero-date-rail { min-height: unset; border-left: 0; border-top: 1px solid var(--white-line); padding: 25px 0 0; display: grid; grid-template-columns: auto 1fr; column-gap: 17px; }.rail-label { grid-column: 1 / -1; }.date-number { font-size: 72px; margin: 15px 0 4px; grid-row: 2 / span 2; }.date-month { align-self: end; font-size: 18px; }.rail-rule { margin: 10px 0; grid-column: 2; }.rail-venue { grid-column: 2; }.hero-foot { height: 62px; font-size: 9px; }.hero-foot > span:first-child { max-width: 180px; }.scroll-cue { font-size: 9px; }
+  .hero-section { min-height: 710px; }.hero-content { min-height: 640px; display: flex; flex-direction: column; align-items: stretch; padding-top: 110px; }.hero-copy { padding: 28px 0 15px; }.hero-copy h1 { font-size: clamp(55px, 17vw, 78px); }.hero-intro { font-size: 15px; }.hero-match-image { position: relative; z-index: 0; top: auto; right: auto; width: 100%; margin: 5px 0 17px; transform: rotate(0); }.hero-match-image img { opacity: .64; height: 150px; }.hero-date-rail { min-height: unset; border-left: 0; border-top: 1px solid var(--white-line); padding: 25px 0 0; display: grid; grid-template-columns: auto 1fr; column-gap: 17px; }.rail-label { grid-column: 1 / -1; }.date-number { font-size: 72px; margin: 15px 0 4px; grid-row: 2 / span 2; }.date-month { align-self: end; font-size: 18px; }.rail-rule { margin: 10px 0; grid-column: 2; }.rail-venue { grid-column: 2; }.hero-foot { height: 62px; font-size: 9px; }.hero-foot > span:first-child { max-width: 180px; }.scroll-cue { font-size: 9px; }
   .trust-grid { grid-template-columns: 1fr; padding: 14px 0; gap: 0; }.trust-grid > div, .trust-grid > div:first-child { border-right: 0; border-bottom: 1px solid rgba(20,20,20,.18); padding: 12px 0; }.trust-grid > div:last-child { border-bottom: 0; }
   .notice-section { padding-top: 22px; }.launch-notice { padding: 15px; }.notice-code { display: none; }
   .tickets-section { padding-top: 75px; padding-bottom: 80px; }.split-heading { display: block; }.split-heading > p { margin-top: 26px; }.ticket-layout { display: flex; flex-direction: column; gap: 35px; }.ticket-option { grid-template-columns: 42px 1fr 22px; gap: 13px; padding: 16px 13px; }.ticket-price { grid-column: 2; align-items: start; margin-top: 4px; }.ticket-price > small { display: inline; }.radio-mark { grid-column: 3; grid-row: 1; }.order-card { width: 100%; position: static; box-shadow: 9px 9px 0 var(--paper-deep); }
-  .venue-section { padding-bottom: 75px; }.venue-card { padding: 38px 27px; min-height: 530px; }.venue-card h2 { font-size: 46px; }.venue-mark { top: auto; bottom: 12px; right: 12px; width: 180px; height: 180px; opacity: .46; }.venue-card p { margin-top: 23px; }
+  .venue-section { padding-bottom: 75px; }.venue-card { padding: 38px 27px; min-height: 530px; }.venue-card h2 { font-size: 46px; }.venue-match-image { width: 210px; right: 18px; bottom: 32px; }.venue-mark { top: auto; bottom: 12px; right: 12px; width: 180px; height: 180px; opacity: .3; }.venue-card p { margin-top: 23px; }
   .details-section { padding-bottom: 80px; grid-template-columns: 1fr; gap: 35px; }.detail-column { padding-right: 40px; }
   .help-section { padding-bottom: 80px; display: block; }.faq-list { margin-top: 40px; }
   .footer-top { grid-template-columns: 1fr; padding-top: 32px; padding-bottom: 25px; gap: 26px; }.footer-bottom { min-height: 75px; align-items: flex-start; flex-direction: column; justify-content: center; gap: 7px; }

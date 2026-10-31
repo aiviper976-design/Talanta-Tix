@@ -200,6 +200,10 @@ export default function Home() {
               </div>
               <button className="text-link light-link" onClick={() => scrollTo("tickets")}>Choose your ticket <ArrowUpRight size={16} /></button>
             </div>
+            <figure className="hero-match-image">
+              <img src="/assets/bayern-ajax-match.webp" alt="FC Bayern and Ajax players with the Raila Odinga International Stadium" />
+              <figcaption>FC Bayern · Ajax · Nairobi</figcaption>
+            </figure>
             <div className="hero-date-rail">
               <div className="rail-label">Match date</div>
               <div className="date-number">05</div>
@@ -242,6 +246,7 @@ export default function Home() {
                 </button>
               ))}
               <div className="price-footnote"><Info size={14} /> Preview prices only — final amounts, seat allocation and taxes/fees are configurable by the authorized organizer.</div>
+              <figure className="ticket-atmosphere"><img src="/assets/talanta-stadium-interior.webp" alt="Interior view of the stadium seating bowl" /><figcaption>Find your view inside the bowl</figcaption></figure>
             </div>
             <aside className="order-card">
               <div className="order-card-top"><span className="eyebrow"><span className="eyebrow-line dark" /> Your order</span><span className="order-counter">01</span></div>
@@ -258,6 +263,7 @@ export default function Home() {
         <section className="venue-section page-width" id="venue">
           <div className="venue-card">
             <div className="venue-card-copy"><div className="eyebrow light"><span className="eyebrow-line" /> The new home of Kenyan sport</div><h2>Raila Odinga<br /><em>International Stadium.</em></h2><p>A 60,000-seat national stadium at Talanta Sports City, off Ngong Road in Nairobi. This match is announced as the ceremonial opening of the new venue.</p><div className="venue-meta"><span><MapPin size={15} /> Jamhuri Grounds, Nairobi</span><span><Ticket size={15} /> 60,000-seat venue</span></div><a className="text-link light-link" href="https://www.google.com/maps/search/?api=1&query=Jamhuri+Grounds+Nairobi" target="_blank" rel="noreferrer">Open venue map <ExternalLink size={15} /></a></div>
+            <figure className="venue-match-image"><img src="/assets/talanta-stadium-aerial.webp" alt="Aerial night view of Talanta Sports City stadium" /><figcaption>Talanta Sports City · Nairobi</figcaption></figure>
             <div className="venue-mark" aria-hidden="true"><div className="venue-ring ring-one" /><div className="venue-ring ring-two" /><div className="venue-star">✦</div><span>TSC<br />NBO</span></div>
           </div>
         </section>
