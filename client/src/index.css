@@ -42,6 +42,8 @@ a { color: inherit; text-decoration: none; }
 .header-status { color: rgba(255,255,255,.68); font: 11px/1 "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: 8px; }
 .status-dot, .availability span { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); display: inline-block; }
 .header-cta, .checkout-button { background: var(--orange) !important; color: var(--ink) !important; border: 0 !important; border-radius: 999px !important; font-weight: 800 !important; height: 44px !important; padding: 0 19px !important; transition: transform .2s, background .2s !important; }
+.payment-submit-button { background: #2eae69 !important; color: #071a0f !important; }
+.payment-submit-button:hover { background: #48c981 !important; }
 .header-cta:hover, .checkout-button:hover { background: #ff7558 !important; transform: translateY(-2px); }
 .mobile-menu { display: none; color: #fff; background: none; border: 0; }
 
