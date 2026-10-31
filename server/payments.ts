@@ -2,6 +2,11 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { orders, type Order } from "../drizzle/schema";
 import { getDb } from "./db";
+import {
+  darajaPaymentAdapter,
+  normalizePhone,
+  type DarajaCallbackResult,
+} from "./lib/daraja";
 
 export type TicketOrderStatus = "pending" | "paid" | "cancelled" | "failed" | "expired";
 
@@ -22,58 +27,7 @@ function makeOrderCode() {
   return `TT-${stamp}-${random}`;
 }
 
-export function normalizeKenyanPhone(input: string) {
-  const digits = input.replace(/[\s()-]/g, "");
-  if (/^07\d{8}$/.test(digits) || /^01\d{8}$/.test(digits)) return `254${digits.slice(1)}`;
-  if (/^254[17]\d{8}$/.test(digits)) return digits;
-  if (/^\+254[17]\d{8}$/.test(digits)) return digits.slice(1);
-  return null;
-}
-
-function darajaConfig() {
-  const isProduction = process.env.DARAJA_ENV === "production";
-  return {
-    baseUrl: isProduction ? "https://api.safaricom.co.ke" : "https://sandbox.safaricom.co.ke",
-    consumerKey: process.env.DARAJA_CONSUMER_KEY,
-    consumerSecret: process.env.DARAJA_CONSUMER_SECRET,
-    shortCode: process.env.DARAJA_SHORTCODE,
-    passKey: process.env.DARAJA_PASSKEY,
-    callbackUrl: process.env.DARAJA_CALLBACK_URL,
-  };
-}
-
-function assertDarajaConfig() {
-  const config = darajaConfig();
-  const missing = Object.entries(config)
-    .filter(([, value]) => !value)
-    .map(([key]) => key);
-  if (missing.length) {
-    throw new Error(`Daraja is not configured. Missing: ${missing.join(", ")}`);
-  }
-  return config as Required<typeof config>;
-}
-
-async function readDarajaJson<T>(response: Response, operation: string): Promise<T> {
-  const raw = await response.text();
-  if (!raw.trim()) {
-    throw new Error(`${operation} returned an empty response (HTTP ${response.status}). Verify DARAJA_ENV and the Daraja app configuration.`);
-  }
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    throw new Error(`${operation} returned a non-JSON response (HTTP ${response.status}). Verify DARAJA_ENV and the Daraja endpoint configuration.`);
-  }
-}
-
-async function getAccessToken(config: Required<ReturnType<typeof darajaConfig>>) {
-  const basic = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString("base64");
-  const response = await fetch(`${config.baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
-    headers: { Authorization: `Basic ${basic}` },
-  });
-  const body = await readDarajaJson<{ access_token?: string; errorMessage?: string }>(response, "Daraja OAuth");
-  if (!response.ok || !body.access_token) throw new Error(body.errorMessage || `Daraja OAuth did not return an access token (HTTP ${response.status}).`);
-  return body.access_token;
-}
+export const normalizeKenyanPhone = normalizePhone;
 
 async function createOrder(input: NewTicketOrder): Promise<Order> {
   const orderCode = makeOrderCode();
@@ -126,16 +80,17 @@ async function updateOrder(orderCode: string, patch: Partial<Order>) {
   return next;
 }
 
-function callbackMetadata(items: Array<{ Name: string; Value?: string | number }>) {
-  return Object.fromEntries(items.map(item => [item.Name, item.Value]));
-}
-
 export const paymentsRouter = Router();
 
 paymentsRouter.post("/orders/stk-push", async (req, res) => {
   try {
     const { buyerName, email, phone, category, quantity, amount } = req.body ?? {};
-    const normalizedPhone = normalizeKenyanPhone(String(phone ?? ""));
+    let normalizedPhone: string;
+    try {
+      normalizedPhone = normalizePhone(String(phone ?? ""));
+    } catch {
+      return res.status(400).json({ error: "Enter a valid Kenyan M-Pesa number, such as 0712 345 678." });
+    }
     const safeQuantity = Number(quantity);
     const safeAmount = Number(amount);
 
@@ -146,42 +101,25 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
       return res.status(400).json({ error: "Review the ticket selection and try again." });
     }
 
-    const config = assertDarajaConfig();
     const order = await createOrder({ buyerName: String(buyerName).trim(), email: String(email).trim(), phone: normalizedPhone, category: String(category), quantity: safeQuantity, amount: safeAmount });
-    const token = await getAccessToken(config);
-    const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
-    const password = Buffer.from(`${config.shortCode}${config.passKey}${timestamp}`).toString("base64");
-
-    const response = await fetch(`${config.baseUrl}/mpesa/stkpush/v1/processrequest`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        BusinessShortCode: config.shortCode,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: "CustomerPayBillOnline",
-        Amount: safeAmount,
-        PartyA: normalizedPhone,
-        PartyB: config.shortCode,
-        PhoneNumber: normalizedPhone,
-        CallBackURL: config.callbackUrl,
-        AccountReference: order.orderCode,
-        TransactionDesc: `Talanta Tix ${String(category).slice(0, 30)}`,
-      }),
+    const result = await darajaPaymentAdapter.initiate({
+      phoneNumber: normalizedPhone,
+      amountMinor: safeAmount * 100,
+      currency: "KES",
+      idempotencyKey: order.orderCode,
     });
-    const body = await readDarajaJson<{ MerchantRequestID?: string; CheckoutRequestID?: string; ResponseCode?: string; ResponseDescription?: string; CustomerMessage?: string }>(response, "Daraja STK Push");
-    if (!response.ok || body.ResponseCode !== "0" || !body.CheckoutRequestID) {
-      await updateOrder(order.orderCode, { status: "failed", resultDescription: body.ResponseDescription || "STK Push was not accepted" });
-      return res.status(502).json({ error: body.ResponseDescription || "M-Pesa could not start the payment prompt." });
+    if (result.status === "disabled") {
+      await updateOrder(order.orderCode, { status: "failed", resultDescription: result.message });
+      return res.status(503).json({ error: "M-Pesa checkout is not configured yet. Add the protected Daraja settings before launch." });
     }
 
-    await updateOrder(order.orderCode, { merchantRequestId: body.MerchantRequestID, checkoutRequestId: body.CheckoutRequestID });
-    return res.json({ orderCode: order.orderCode, checkoutRequestId: body.CheckoutRequestID, status: "pending" });
+    await updateOrder(order.orderCode, { merchantRequestId: result.providerRequestId, checkoutRequestId: result.checkoutRequestId });
+    return res.json({ orderCode: order.orderCode, checkoutRequestId: result.checkoutRequestId, status: "pending" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start payment.";
     console.error("[Daraja] STK Push error:", message);
-    if (message.startsWith("Daraja is not configured")) return res.status(503).json({ error: "M-Pesa checkout is not configured yet. Add the protected Daraja settings before launch." });
     if (message.startsWith("Daraja OAuth") || message.startsWith("Daraja STK Push")) return res.status(502).json({ error: message });
+    if (message.includes("Daraja payments require") || message.includes("Daraja amount")) return res.status(400).json({ error: message });
     return res.status(502).json({ error: "We could not start the M-Pesa prompt. Please try again." });
   }
 });
@@ -195,21 +133,31 @@ paymentsRouter.get("/orders/:orderCode", async (req, res) => {
 paymentsRouter.post("/daraja/callback", async (req, res) => {
   try {
     const callback = req.body?.Body?.stkCallback;
-    const orderCode = String(callback?.CallbackMetadata?.Item?.find?.((item: { Name: string }) => item.Name === "AccountReference")?.Value ?? req.body?.orderCode ?? "");
-    const checkoutRequestId = callback?.CheckoutRequestID;
-    const existing = checkoutRequestId ? await findOrderByCheckoutRequestId(checkoutRequestId) : undefined;
-    const targetCode = existing?.orderCode || orderCode;
-    if (targetCode) {
-      const resultCode = Number(callback?.ResultCode);
-      const items = Array.isArray(callback?.CallbackMetadata?.Item) ? callback.CallbackMetadata.Item : [];
-      const metadata = callbackMetadata(items);
-      await updateOrder(targetCode, {
-        status: resultCode === 0 ? "paid" : resultCode === 1032 ? "cancelled" : "failed",
-        resultCode,
-        resultDescription: callback?.ResultDesc,
-        mpesaReceiptNumber: metadata.MpesaReceiptNumber ? String(metadata.MpesaReceiptNumber) : undefined,
-        checkoutRequestId,
+    const merchantRequestId = typeof callback?.MerchantRequestID === "string" ? callback.MerchantRequestID : "";
+    const checkoutRequestId = typeof callback?.CheckoutRequestID === "string" ? callback.CheckoutRequestID : "";
+    const accountReference = String(callback?.CallbackMetadata?.Item?.find?.((item: { Name: string }) => item.Name === "AccountReference")?.Value ?? req.body?.orderCode ?? "");
+    const existing = (checkoutRequestId ? await findOrderByCheckoutRequestId(checkoutRequestId) : undefined) ??
+      (merchantRequestId ? await findOrderByMerchantRequestId(merchantRequestId) : undefined) ??
+      (accountReference ? await findOrder(accountReference) : undefined);
+
+    if (existing && merchantRequestId) {
+      const result: DarajaCallbackResult = darajaPaymentAdapter.reconcileCallback(req.body, {
+        providerRequestId: merchantRequestId,
+        amountMinor: existing.amount * 100,
+        currency: "KES",
+        phoneNumber: existing.phone,
       });
+      if (result.accepted) {
+        await updateOrder(existing.orderCode, {
+          status: result.status === "paid" ? "paid" : Number(callback?.ResultCode) === 1032 ? "cancelled" : "failed",
+          resultCode: typeof callback?.ResultCode === "number" ? callback.ResultCode : Number(callback?.ResultCode),
+          resultDescription: typeof callback?.ResultDesc === "string" ? callback.ResultDesc : undefined,
+          mpesaReceiptNumber: result.providerTransactionId,
+          checkoutRequestId: checkoutRequestId || existing.checkoutRequestId,
+        });
+      } else {
+        console.warn("[Daraja] Callback reconciliation rejected", { orderCode: existing.orderCode, reason: result.reason });
+      }
     }
     return res.json({ ResultCode: 0, ResultDesc: "Accepted" });
   } catch (error) {
@@ -225,4 +173,13 @@ async function findOrderByCheckoutRequestId(checkoutRequestId: string) {
     return result[0];
   }
   return Array.from(memoryOrders.values()).find(order => order.checkoutRequestId === checkoutRequestId);
+}
+
+async function findOrderByMerchantRequestId(merchantRequestId: string) {
+  const db = await getDb();
+  if (db) {
+    const result = await db.select().from(orders).where(eq(orders.merchantRequestId, merchantRequestId)).limit(1);
+    return result[0];
+  }
+  return Array.from(memoryOrders.values()).find(order => order.merchantRequestId === merchantRequestId);
 }
