@@ -47,7 +47,7 @@ type CallbackItem = { Name?: unknown; Value?: unknown };
 export const DEFAULT_BASE_URL = "https://sandbox.safaricom.co.ke";
 export const DEFAULT_SANDBOX_SHORTCODE = "174379";
 export const DEFAULT_SANDBOX_PASSKEY = "";
-export const DISABLED_MESSAGE = "Daraja payment requests are disabled until a Kenyan M-PESA shortcode/Till/PayBill, callback URL, and production approval are configured.";
+export const DISABLED_MESSAGE = "Daraja payment requests are disabled until the shortcode, customer till, callback URL, and production approval are configured.";
 
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -103,13 +103,15 @@ export class DarajaPaymentAdapter {
   }
 
   isConfigured(): boolean {
+    const tillReady = this.config.transactionType !== "CustomerBuyGoodsOnline" || Boolean(this.config.tillNumber);
     return Boolean(
       this.config.enabled &&
         this.config.consumerKey &&
         this.config.consumerSecret &&
         this.config.callbackUrl &&
         this.config.shortcode &&
-        this.config.passkey,
+        this.config.passkey &&
+        tillReady,
     );
   }
 
@@ -124,7 +126,7 @@ export class DarajaPaymentAdapter {
     const accessToken = await this.getAccessToken();
     const timestamp = formatTimestamp();
     const password = Buffer.from(`${this.config.shortcode}${this.config.passkey}${timestamp}`).toString("base64");
-    const partyB = this.config.transactionType === "CustomerBuyGoodsOnline" ? this.config.tillNumber || this.config.shortcode : this.config.shortcode;
+    const partyB = this.config.transactionType === "CustomerBuyGoodsOnline" ? this.config.tillNumber! : this.config.shortcode;
     const response = await this.config.fetchImpl(`${this.config.baseUrl}/mpesa/stkpush/v1/processrequest`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", Accept: "application/json" },
@@ -191,7 +193,7 @@ export class DarajaPaymentAdapter {
   }
 }
 
-export function createDarajaPaymentAdapterFromEnv(env: NodeJS.ProcessEnv = process.env): DarajaPaymentAdapter {
+export function createDarajaPaymentAdapterFromEnv(env: NodeJS.ProcessEnv = process.env, fetchImpl?: typeof fetch): DarajaPaymentAdapter {
   const enabled = env.DARAJA_ENABLED === undefined ? undefined : env.DARAJA_ENABLED === "true";
   return new DarajaPaymentAdapter({
     enabled,
@@ -201,8 +203,9 @@ export function createDarajaPaymentAdapterFromEnv(env: NodeJS.ProcessEnv = proce
     shortcode: env.DARAJA_SHORTCODE,
     passkey: env.DARAJA_PASSKEY,
     callbackUrl: env.DARAJA_CALLBACK_URL,
-    transactionType: env.DARAJA_TRANSACTION_TYPE === "CustomerBuyGoodsOnline" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline",
+    transactionType: env.DARAJA_TRANSACTION_TYPE === "CustomerPayBillOnline" ? "CustomerPayBillOnline" : "CustomerBuyGoodsOnline",
     tillNumber: env.DARAJA_TILL_NUMBER,
+    fetchImpl,
   });
 }
 

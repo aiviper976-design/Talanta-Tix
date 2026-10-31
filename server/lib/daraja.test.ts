@@ -3,6 +3,7 @@ import {
   DarajaPaymentAdapter,
   DEFAULT_BASE_URL,
   DISABLED_MESSAGE,
+  createDarajaPaymentAdapterFromEnv,
   formatTimestamp,
   normalizePhone,
 } from "./daraja";
@@ -100,6 +101,30 @@ describe("DarajaPaymentAdapter", () => {
       .mockResolvedValueOnce(response({ MerchantRequestID: "merchant-buy", ResponseCode: "0" }));
     const adapter = new DarajaPaymentAdapter({ ...baseConfig, transactionType: "CustomerBuyGoodsOnline", tillNumber: "998877", fetchImpl });
     await adapter.initiate({ phoneNumber: "0712345678", amountMinor: 50000, currency: "KES", idempotencyKey: "buy-1" });
+    expect(JSON.parse(String(fetchImpl.mock.calls[1][1]?.body))).toMatchObject({ TransactionType: "CustomerBuyGoodsOnline", PartyB: 998877 });
+  });
+
+  it("does not treat the shortcode as a customer till", async () => {
+    const adapter = new DarajaPaymentAdapter({ ...baseConfig, transactionType: "CustomerBuyGoodsOnline" });
+    const result = await adapter.initiate({ phoneNumber: "0712345678", amountMinor: 50000, currency: "KES", idempotencyKey: "buy-without-till" });
+    expect(result).toEqual({ enabled: false, status: "disabled", message: DISABLED_MESSAGE });
+  });
+
+  it("defaults the environment factory to Buy Goods when no transaction type is supplied", async () => {
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(response({ access_token: "access-token" }))
+      .mockResolvedValueOnce(response({ MerchantRequestID: "merchant-env", ResponseCode: "0" }));
+    const adapter = createDarajaPaymentAdapterFromEnv({
+      DARAJA_CONSUMER_KEY: "consumer-key",
+      DARAJA_CONSUMER_SECRET: "consumer-secret",
+      DARAJA_SHORTCODE: "123456",
+      DARAJA_PASSKEY: "pass-key",
+      DARAJA_TILL_NUMBER: "998877",
+      DARAJA_CALLBACK_URL: "https://merchant.test/api/daraja/callback",
+      DARAJA_BASE_URL: "https://daraja.test",
+    } as NodeJS.ProcessEnv, fetchImpl);
+    const result = await adapter.initiate({ phoneNumber: "0712345678", amountMinor: 50000, currency: "KES", idempotencyKey: "env-buy" });
+    expect(result).toMatchObject({ enabled: true, status: "initiated", providerRequestId: "merchant-env" });
     expect(JSON.parse(String(fetchImpl.mock.calls[1][1]?.body))).toMatchObject({ TransactionType: "CustomerBuyGoodsOnline", PartyB: 998877 });
   });
 
