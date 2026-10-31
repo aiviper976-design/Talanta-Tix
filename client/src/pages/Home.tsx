@@ -288,7 +288,7 @@ export default function Home() {
       </main>
 
       <footer className="site-footer">
-        <div className="page-width footer-top"><div className="footer-brand"><button className="wordmark footer-wordmark" onClick={() => scrollTo("top")}><TicketMark small /><span>TALANTA <em>TIX</em></span></button><p>Your route to matchday in Nairobi.</p></div><div className="footer-links"><a href="mailto:hello@talantatix.example"><Mail size={15} /> hello@talantatix.example</a><a href="tel:+254700000000"><Phone size={15} /> +254 700 000 000</a></div><div className="footer-source"><span className="mini-label">EVENT SOURCE</span><a href="https://fcbayern.com/en/news/2026/10/special-match-in-nairobi-fc-bayern-to-take-on-ajax" target="_blank" rel="noreferrer">FC Bayern announcement <ExternalLink size={13} /></a></div></div>
+        <div className="page-width footer-top"><div className="footer-brand"><button className="wordmark footer-wordmark" onClick={() => scrollTo("top")}><TicketMark small /><span>TALANTA <em>TIX</em></span></button><p>Your route to matchday in Nairobi.</p></div><div className="footer-links"><a href="mailto:vipertechs@outlook.com"><Mail size={15} /> vipertechs@outlook.com</a><a href="tel:+254713443577"><Phone size={15} /> 0713 443 577</a></div><div className="footer-source"><span className="mini-label">EVENT SOURCE</span><a href="https://fcbayern.com/en/news/2026/10/special-match-in-nairobi-fc-bayern-to-take-on-ajax" target="_blank" rel="noreferrer">FC Bayern announcement <ExternalLink size={13} /></a></div></div>
         <div className="page-width footer-bottom"><span>© 2026 Talanta Tix · Independent ticketing interface</span><span>Final event terms and organizer details TBC</span></div>
       </footer>
 
