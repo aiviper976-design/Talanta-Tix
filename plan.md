@@ -1,40 +1,38 @@
-# Talanta Tix — implementation plan
+# Talanta Tix — lean ticket storefront plan
 
 ## Product scope
-Talanta Tix is a responsive event-ticketing storefront for the FC Bayern Munich vs AFC Ajax match on 5 January 2027 at Raila Odinga International Stadium at Talanta Sports City, Nairobi. The site presents verified event facts, makes unknown production details explicit, lets a buyer select ticket categories, and prepares a secure M-Pesa Daraja STK Push checkout with callback reconciliation and digital order confirmation.
+Talanta Tix is a responsive ticket-first storefront for FC Bayern Munich vs AFC Ajax on 5 January 2027 at Raila Odinga International Stadium, Talanta Sports City, Nairobi. The redesign removes the long editorial, venue, FAQ, and launch-notice sections and focuses the page on the match, ticket choices, Early Bird offer, order summary, and secure M-Pesa checkout.
 
 ## Implementation approach
-- Frontend: React + TypeScript + Tailwind, single-page purchase experience with anchor navigation and an order drawer/modal.
-- Backend: Express routes for STK Push initiation, callback receipt, and order-status polling. Daraja credentials are read only from server-side environment variables.
-- Persistence: Drizzle/MySQL `orders` table when the managed database is available. An in-memory fallback keeps Preview usable without pretending a payment succeeded.
-- Payments: Daraja OAuth token + Lipa na M-Pesa Online STK Push. The browser never decides payment success; it polls the order-status endpoint while the callback updates the authoritative order state.
-- Deployment safeguards: `DARAJA_CALLBACK_URL`, shortcode, passkey, consumer key, and consumer secret remain protected configuration. The UI prominently labels ticket prices, seat map, kickoff time, organizer, and sales authorization as configurable until officially confirmed.
+- Frontend: React + TypeScript single-page storefront with a compact hero, ticket selector, order card, and checkout modal.
+- Backend: Keep the existing Express Daraja STK Push initiation, callback reconciliation, order polling, and digital ticket confirmation unchanged.
+- Pricing: Add a clearly labeled Early Bird ticket at KSh 500 with limited-allocation copy and a 25 November 2026 deadline. Keep regular ticket tiers visible with their existing KSh prices.
+- Trust and contact: Retain only short, necessary checkout safety copy and the configured contact email/phone in the footer.
+- Assets: Reuse the user-supplied Bayern–Ajax artwork and stadium aerial image. Do not copy source code or proprietary assets from the external reference site.
 
 ## Project structure
-- `client/src/pages/Home.tsx` — landing page, ticket picker, checkout, payment states, help/terms content.
-- `client/src/index.css` — visual system and responsive layout.
-- `server/payments.ts` — order store, phone normalization, Daraja integration, callback reconciliation.
-- `server/_core/index.ts` — Express route registration.
-- `drizzle/schema.ts` — `orders` persistence model.
-- `public/manus-routes.json` — route manifest for the managed website.
+- `client/src/pages/Home.tsx` — lean match hero, flash-sale banner, ticket options, order summary, checkout, payment states, and compact footer.
+- `client/src/index.css` — reference-inspired dark hero, orange sale treatment, compact ticket list, responsive layout, and checkout styling.
+- `server/payments.ts` — order store and Daraja integration.
+- `server/_core/index.ts` — Express route registration and JSON API fallback.
+- `drizzle/schema.ts` — order persistence model.
+- `public/manus-routes.json` — managed route declaration.
 
 ## Design
 
-### Three possible styles
-- **Night Matchday / stadium floodlight editorial** — 0.07 probability.
-- **Civic modern / red-and-gold public event service** — 0.08 probability.
-- **Continental sport-luxury / ink, cream and orange** — 0.06 probability.
+### Reference cues
+The public Talanta Sports City page uses a sparse event landing page: dark full-bleed hero, oversized match/date typography, crest treatment, one strong CTA, and a minimal footer. This implementation uses those high-level layout cues without copying code, text, or proprietary assets.
 
-### Chosen direction: Night Matchday / stadium floodlight editorial
-- **Design Movement:** modern sports editorial with the atmosphere of a floodlit stadium, not a generic fintech checkout.
-- **Core Principles:** confident hierarchy, high legibility, visible trust signals, and fast decision-making.
-- **Color Philosophy:** deep ink and graphite create match-night focus; warm ivory keeps long-form content readable; orange-red acts as the owned energy color for CTAs and highlights.
-- **Layout Paradigm:** asymmetrical split hero with an event rail, followed by generous editorial sections and a sticky ticket summary rather than a centered marketing grid.
-- **Signature Elements:** a vertical match rail, oversized numerals for the date, and ticket stubs with perforation-like borders.
-- **Interaction Philosophy:** every action confirms what happens next; selected tickets update the summary immediately and checkout makes the payment handoff explicit.
-- **Animation:** restrained lift/fade on section entry, pulsing status dot only for pending payment, and no movement that competes with the CTA.
-- **Typography System:** Space Grotesk for display/UI with IBM Plex Mono for metadata, references, ticket codes, and status labels.
-- **Brand Essence:** the clearest route from Nairobi to matchday; direct, electric, accountable.
-- **Brand Voice:** “Your seat to the opening night.” and “Pay on your phone. Enter with a ticket that’s yours.”
-- **Wordmark & Logo:** a compact ticket-notch monogram: two opposing cuts around a small floodlight star, paired with the TALANTA TIX wordmark.
-- **Signature Brand Color:** signal orange `#ff5a36`, used sparingly so it remains ownable.
+### Chosen direction: Minimal stadium-event storefront
+- **Design Movement:** civic sports announcement meets premium match poster.
+- **Core Principles:** immediate event recognition, one dominant ticket CTA, low copy density, and visible price/deadline hierarchy.
+- **Color Philosophy:** black and stadium-night imagery establish event focus; signal orange carries urgency and the flash-sale moment; ivory keeps ticket selection readable.
+- **Layout Paradigm:** full-bleed hero followed directly by a two-column ticket list and sticky order card; no long-scroll marketing sections.
+- **Signature Elements:** oversized uppercase match title, orange flash-sale ribbon, and ticket-stub order card.
+- **Interaction Philosophy:** select a ticket, see the KSh total update, press Pay, and follow the existing server-verified M-Pesa states.
+- **Animation:** restrained hover lift on CTAs and ticket rows; no distracting motion around the sale deadline.
+- **Typography System:** Space Grotesk for the match title and controls with IBM Plex Mono for dates, sale metadata, and payment references.
+- **Brand Essence:** the fastest route from Nairobi to a seat; direct, electric, minimal.
+- **Brand Voice:** “Pick your seat.” and “Early birds from KSh 500.”
+- **Wordmark & Logo:** compact ticket-notch monogram paired with the TALANTA TIX wordmark.
+- **Signature Brand Color:** signal orange `#ff5a36`.

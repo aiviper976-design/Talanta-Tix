@@ -1,17 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
-  CalendarDays,
   Check,
-  ChevronDown,
-  CircleCheck,
-  Clock3,
-  ExternalLink,
-  Info,
   LockKeyhole,
   Mail,
-  MapPin,
   Menu,
   Minus,
   Phone,
@@ -34,34 +27,15 @@ type TicketOption = {
 
 type PaymentState = "idle" | "starting" | "pending" | "paid" | "cancelled" | "failed";
 
+const saleDeadline = "25 NOV 2026";
 const ticketOptions: TicketOption[] = [
-  {
-    id: "north-stand",
-    name: "North Stand",
-    price: 1800,
-    tag: "Matchday",
-    note: "Upper tier · full-pitch view",
-    accent: "orange",
-  },
-  {
-    id: "east-stand",
-    name: "East Stand",
-    price: 3200,
-    tag: "Closer to the action",
-    note: "Lower tier · halfway line views",
-    accent: "cream",
-  },
-  {
-    id: "premium-sideline",
-    name: "Premium Sideline",
-    price: 7500,
-    tag: "Best available",
-    note: "Premium seating · hospitality details TBC",
-    accent: "gold",
-  },
+  { id: "early-bird", name: "Early Bird", price: 500, tag: "Flash sale", note: `Limited allocation · valid till ${saleDeadline}`, accent: "orange" },
+  { id: "north-stand", name: "North Stand", price: 1800, tag: "Matchday", note: "Upper tier · full-pitch view", accent: "orange" },
+  { id: "east-stand", name: "East Stand", price: 3200, tag: "Matchday", note: "Lower tier · halfway line views", accent: "cream" },
+  { id: "premium-sideline", name: "Premium Sideline", price: 7500, tag: "Premium", note: "Premium seating · hospitality details TBC", accent: "gold" },
 ];
 
-const formatKes = (value: number) => `KES ${value.toLocaleString("en-KE")}`;
+const formatKes = (value: number) => `KSh ${value.toLocaleString("en-KE")}`;
 
 function TicketMark({ small = false }: { small?: boolean }) {
   return (
@@ -87,9 +61,9 @@ export default function Home() {
   const serviceFee = Math.round(subtotal * 0.04);
   const total = subtotal + serviceFee;
 
-  const scrollTo = (id: string) => {
+  const scrollToTickets = () => {
     setMobileOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const updateQuantity = (next: number) => setQuantity(Math.min(10, Math.max(1, next)));
@@ -165,131 +139,77 @@ export default function Home() {
   }, [paymentState, orderCode]);
 
   return (
-    <div className="site-shell">
-      <header className="site-header">
+    <div className="site-shell lean-site">
+      <header className="site-header lean-header">
         <div className="header-inner">
-          <button className="wordmark" onClick={() => scrollTo("top")} aria-label="Talanta Tix home">
+          <button className="wordmark" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Talanta Tix home">
             <TicketMark small />
             <span>TALANTA <em>TIX</em></span>
           </button>
           <nav className={`main-nav ${mobileOpen ? "main-nav-open" : ""}`}>
-            <button onClick={() => scrollTo("match")}>The match</button>
-            <button onClick={() => scrollTo("tickets")}>Tickets</button>
-            <button onClick={() => scrollTo("venue")}>Venue</button>
-            <button onClick={() => scrollTo("help")}>Help</button>
+            <button onClick={scrollToTickets}>Tickets</button>
+            <a href="mailto:vipertechs@outlook.com">Contact</a>
           </nav>
-          <div className="header-actions">
-            <span className="header-status"><span className="status-dot" /> Sales preview</span>
-            <Button className="header-cta" onClick={() => scrollTo("tickets")}>Find a seat <ArrowUpRight size={16} /></Button>
-          </div>
+          <Button className="header-cta" onClick={scrollToTickets}>Buy tickets <ArrowUpRight size={16} /></Button>
           <button className="mobile-menu" onClick={() => setMobileOpen(value => !value)} aria-label="Toggle menu">
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            {mobileOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
         </div>
       </header>
 
       <main id="top">
-        <section className="hero-section" id="match">
-          <div className="hero-grid-lines" aria-hidden="true" />
-          <div className="hero-content page-width">
-            <div className="hero-copy">
-              <div className="eyebrow light"><span className="eyebrow-line" /> Nairobi · Opening night 2027</div>
-              <h1>Your seat to<br /><span>the opening night.</span></h1>
-              <p className="hero-intro">Two European giants. One brand-new stadium. A matchday built for the whole city.</p>
-              <div className="hero-matchup">
-                <div className="club-card"><span className="club-initial bayern">F</span><span>FC Bayern</span></div>
-                <span className="versus">VS</span>
-                <div className="club-card"><span className="club-initial ajax">A</span><span>Ajax</span></div>
+        <section className="lean-hero">
+          <div className="lean-hero-glow" aria-hidden="true" />
+          <div className="lean-hero-inner page-width">
+            <div className="lean-hero-copy">
+              <div className="reference-kicker">Talanta Sports City · Nairobi · Kenya</div>
+              <h1>BAyern Munich<br /><span>vs Ajax</span></h1>
+              <div className="lean-crests" aria-label="Bayern Munich versus Ajax">
+                <div className="crest crest-bayern">FCB</div><b>VS</b><div className="crest crest-ajax">AFC</div>
               </div>
-              <button className="text-link light-link" onClick={() => scrollTo("tickets")}>Choose your ticket <ArrowUpRight size={16} /></button>
+              <div className="lean-date">5 JANUARY 2027</div>
+              <p>Raila Odinga International Stadium</p>
+              <button className="hero-buy" onClick={scrollToTickets}>Get tickets <ArrowUpRight size={18} /></button>
             </div>
-            <figure className="hero-match-image">
-              <img src="/assets/bayern-ajax-match.webp" alt="FC Bayern and Ajax players with the Raila Odinga International Stadium" />
-              <figcaption>FC Bayern · Ajax · Nairobi</figcaption>
+            <figure className="lean-match-art">
+              <img src="/assets/bayern-ajax-match.webp" alt="Bayern Munich versus Ajax match artwork" />
             </figure>
-            <div className="hero-date-rail">
-              <div className="rail-label">Match date</div>
-              <div className="date-number">05</div>
-              <div className="date-month">JAN <span>2027</span></div>
-              <div className="rail-rule" />
-              <div className="rail-venue"><MapPin size={14} /> Raila Odinga International Stadium<br /><span>Talanta Sports City · Nairobi</span></div>
-            </div>
           </div>
-          <div className="hero-foot page-width">
-            <span>Official event information, ticket sales and M-Pesa checkout in one place.</span>
-            <span className="scroll-cue">Scroll to explore <ChevronDown size={16} /></span>
-          </div>
+          <div className="flash-ribbon"><span>FLASH SALE</span><strong>Early birds from KSh 500</strong><small>Valid till {saleDeadline}</small></div>
         </section>
 
-        <section className="trust-strip">
-          <div className="page-width trust-grid">
-            <div><ShieldCheck size={19} /><span><strong>Secure checkout</strong><small>Daraja STK Push, server verified</small></span></div>
-            <div><CalendarDays size={19} /><span><strong>5 January 2027</strong><small>Match date confirmed by club announcement</small></span></div>
-            <div><MapPin size={19} /><span><strong>Talanta Sports City</strong><small>Jamhuri Grounds · off Ngong Road</small></span></div>
+        <section className="lean-tickets page-width" id="tickets">
+          <div className="tickets-topline">
+            <div><span className="section-eyebrow">Tickets on sale now</span><h2>Pick your<br /><em>seat.</em></h2></div>
+            <div className="sale-note"><strong>EARLY BIRD · KSh 500</strong><span>Limited allocation · valid till {saleDeadline}</span></div>
           </div>
-        </section>
-
-        <section className="notice-section page-width">
-          <div className="launch-notice"><Info size={20} /><div><strong>Launch-readiness notice</strong><p>This storefront is ready for configuration, but it should not accept live money until the organizer confirms the final seat map, exact ticket prices, kickoff time, official sales authorization, and refund policy. The ticket tiers below are clearly marked as preview values.</p></div><span className="notice-code">PRE-LAUNCH</span></div>
-        </section>
-
-        <section className="tickets-section page-width" id="tickets">
-          <div className="section-heading split-heading">
-            <div><div className="eyebrow"><span className="eyebrow-line dark" /> Select your view</div><h2>Make the<br /><em>matchday yours.</em></h2></div>
-            <p>Choose a ticket tier, confirm your details, then approve the payment prompt on your M-Pesa phone. Tickets are issued after the Daraja callback confirms payment.</p>
-          </div>
-          <div className="ticket-layout">
+          <div className="lean-ticket-layout">
             <div className="ticket-list">
               {ticketOptions.map(ticket => (
                 <button key={ticket.id} className={`ticket-option ${selectedId === ticket.id ? "ticket-option-selected" : ""}`} onClick={() => setSelectedId(ticket.id)}>
-                  <span className={`ticket-badge ticket-badge-${ticket.accent}`}><Ticket size={18} /></span>
+                  <span className={`ticket-badge ticket-badge-${ticket.accent}`}><Ticket size={17} /></span>
                   <span className="ticket-details"><span className="ticket-tag">{ticket.tag}</span><strong>{ticket.name}</strong><small>{ticket.note}</small></span>
-                  <span className="ticket-price"><small>Preview from</small>{formatKes(ticket.price)}<span className="availability"><span /> Available</span></span>
+                  <span className="ticket-price"><small>KSh</small>{ticket.price.toLocaleString("en-KE")}<span className="availability"><span /> Available</span></span>
                   <span className={`radio-mark ${selectedId === ticket.id ? "radio-mark-on" : ""}`}>{selectedId === ticket.id && <Check size={13} />}</span>
                 </button>
               ))}
-              <div className="price-footnote"><Info size={14} /> Preview prices only — final amounts, seat allocation and taxes/fees are configurable by the authorized organizer.</div>
-              <figure className="ticket-atmosphere"><img src="/assets/talanta-stadium-interior.webp" alt="Interior view of the stadium seating bowl" /><figcaption>Find your view inside the bowl</figcaption></figure>
+              <p className="lean-footnote">Limited flash-sale allocation. Final seat allocation and event terms are set by the authorized organizer.</p>
             </div>
-            <aside className="order-card">
-              <div className="order-card-top"><span className="eyebrow"><span className="eyebrow-line dark" /> Your order</span><span className="order-counter">01</span></div>
+            <aside className="order-card lean-order-card">
+              <div className="order-card-top"><span className="order-label">Your ticket</span><span className="order-counter">01</span></div>
               <div className="order-ticket-visual"><div className="stub-notch stub-notch-left" /><div><span className="mini-label">TALANTA TIX / MATCHDAY</span><strong>{selected.name}</strong><span className="order-date">05 JAN 2027 · NAIROBI</span></div><TicketMark /></div>
               <div className="quantity-row"><span>Quantity</span><div className="quantity-control"><button onClick={() => updateQuantity(quantity - 1)} aria-label="Decrease quantity"><Minus size={15} /></button><strong>{quantity.toString().padStart(2, "0")}</strong><button onClick={() => updateQuantity(quantity + 1)} aria-label="Increase quantity"><Plus size={15} /></button></div></div>
               <div className="summary-lines"><div><span>{selected.name} × {quantity}</span><strong>{formatKes(subtotal)}</strong></div><div><span>Service fee <small>4%</small></span><strong>{formatKes(serviceFee)}</strong></div></div>
               <div className="total-row"><span>Total</span><strong>{formatKes(total)}</strong></div>
-              <Button className="checkout-button" onClick={() => setCheckoutOpen(true)}>Continue to checkout <ArrowUpRight size={17} /></Button>
-              <div className="secure-line"><LockKeyhole size={13} /> Your payment is handled by Safaricom M-Pesa</div>
+              <Button className="checkout-button" onClick={() => setCheckoutOpen(true)}>Pay <ArrowUpRight size={17} /></Button>
+              <div className="secure-line"><LockKeyhole size={13} /> Secure M-Pesa checkout</div>
             </aside>
-          </div>
-        </section>
-
-        <section className="venue-section page-width" id="venue">
-          <div className="venue-card">
-            <div className="venue-card-copy"><div className="eyebrow light"><span className="eyebrow-line" /> The new home of Kenyan sport</div><h2>Raila Odinga<br /><em>International Stadium.</em></h2><p>A 60,000-seat national stadium at Talanta Sports City, off Ngong Road in Nairobi. This match is announced as the ceremonial opening of the new venue.</p><div className="venue-meta"><span><MapPin size={15} /> Jamhuri Grounds, Nairobi</span><span><Ticket size={15} /> 60,000-seat venue</span></div><a className="text-link light-link" href="https://www.google.com/maps/search/?api=1&query=Jamhuri+Grounds+Nairobi" target="_blank" rel="noreferrer">Open venue map <ExternalLink size={15} /></a></div>
-            <figure className="venue-match-image"><img src="/assets/talanta-stadium-aerial.webp" alt="Aerial night view of Talanta Sports City stadium" /><figcaption>Talanta Sports City · Nairobi</figcaption></figure>
-            <div className="venue-mark" aria-hidden="true"><div className="venue-ring ring-one" /><div className="venue-ring ring-two" /><div className="venue-star">✦</div><span>TSC<br />NBO</span></div>
-          </div>
-        </section>
-
-        <section className="details-section page-width">
-          <div className="detail-column"><span className="detail-number">01</span><CalendarDays size={22} /><h3>A night in the diary</h3><p>Tuesday, 5 January 2027. Exact kickoff time is still a configurable production field and must be confirmed by the authorized organizer.</p></div>
-          <div className="detail-column"><span className="detail-number">02</span><Smartphone size={22} /><h3>Pay on your phone</h3><p>Enter your Kenyan M-Pesa number. Daraja sends a secure prompt to your phone and the site waits for the server-side callback.</p></div>
-          <div className="detail-column"><span className="detail-number">03</span><CircleCheck size={22} /><h3>Enter with confidence</h3><p>After payment is confirmed, your order reference and digital ticket code appear in the confirmation view.</p></div>
-        </section>
-
-        <section className="help-section page-width" id="help">
-          <div className="help-heading"><div className="eyebrow"><span className="eyebrow-line dark" /> Before you buy</div><h2>Good to<br /><em>know.</em></h2></div>
-          <div className="faq-list">
-            <details open><summary>When will I receive my ticket? <ChevronDown size={18} /></summary><p>Once the Daraja callback confirms the payment, the order confirmation shows your unique reference and digital ticket code. The organizer may later connect this to email or a dedicated ticket wallet.</p></details>
-            <details><summary>Can I cancel or transfer a ticket? <ChevronDown size={18} /></summary><p>Cancellation, transfer, and refund rules are controlled by the authorized organizer and must be published before live sales. This preview does not promise a refund policy that has not been confirmed.</p></details>
-            <details><summary>What do I need at the gate? <ChevronDown size={18} /></summary><p>Bring the digital ticket code and the phone used for purchase. Final entry rules, ID requirements, gate opening times, and prohibited items remain subject to official organizer confirmation.</p></details>
           </div>
         </section>
       </main>
 
-      <footer className="site-footer">
-        <div className="page-width footer-top"><div className="footer-brand"><button className="wordmark footer-wordmark" onClick={() => scrollTo("top")}><TicketMark small /><span>TALANTA <em>TIX</em></span></button><p>Your route to matchday in Nairobi.</p></div><div className="footer-links"><a href="mailto:vipertechs@outlook.com"><Mail size={15} /> vipertechs@outlook.com</a><a href="tel:+254713443577"><Phone size={15} /> 0713 443 577</a></div><div className="footer-source"><span className="mini-label">EVENT SOURCE</span><a href="https://fcbayern.com/en/news/2026/10/special-match-in-nairobi-fc-bayern-to-take-on-ajax" target="_blank" rel="noreferrer">FC Bayern announcement <ExternalLink size={13} /></a></div></div>
-        <div className="page-width footer-bottom"><span>© 2026 Talanta Tix · Independent ticketing interface</span><span>Final event terms and organizer details TBC</span></div>
+      <footer className="lean-footer">
+        <div className="page-width lean-footer-inner"><span>Talanta Tix · Bayern Munich vs Ajax</span><span className="footer-contact"><a href="mailto:vipertechs@outlook.com"><Mail size={14} /> vipertechs@outlook.com</a><a href="tel:+254713443577"><Phone size={14} /> 0713 443 577</a></span></div>
       </footer>
 
       {checkoutOpen && (
@@ -298,7 +218,7 @@ export default function Home() {
             <button className="modal-close" onClick={resetCheckout} aria-label="Close checkout"><X size={19} /></button>
             {paymentState === "idle" || paymentState === "starting" || paymentState === "failed" ? <>
               <div className="modal-kicker"><span className="eyebrow"><span className="eyebrow-line dark" /> Secure checkout</span><LockKeyhole size={18} /></div>
-              <h2 id="checkout-title">Almost <em>there.</em></h2>
+              <h2 id="checkout-title">Pay for your <em>ticket.</em></h2>
               <p className="modal-intro">We’ll send an M-Pesa prompt to the number you enter. Never share your M-Pesa PIN with anyone.</p>
               <div className="modal-order-line"><span>{selected.name} × {quantity}</span><strong>{formatKes(total)}</strong></div>
               <form onSubmit={startPayment} className="checkout-form">
@@ -308,8 +228,8 @@ export default function Home() {
                 {paymentState === "failed" && <div className="form-error"><AlertCircle size={16} /> {paymentMessage}</div>}
                 <Button type="submit" className="checkout-button payment-submit-button" disabled={paymentState === "starting"}>{paymentState === "starting" ? "Processing…" : "Pay"}<ArrowUpRight size={17} /></Button>
               </form>
-              <div className="modal-footnote"><ShieldCheck size={14} /> Daraja credentials stay on the server. Payment confirmation comes from the Safaricom callback, not the browser.</div>
-            </> : paymentState === "pending" ? <div className="payment-state payment-pending"><div className="state-icon"><Smartphone size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Waiting for approval</div><h2>Check your <em>phone.</em></h2><p>{paymentMessage}</p><div className="pending-loader"><span /><span /><span /></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><button className="quiet-button" onClick={() => { setPaymentState("cancelled"); setPaymentMessage("The prompt was stopped on this screen. If you already approved it, wait for the callback or contact support with your reference."); }}>I didn’t approve</button></div> : paymentState === "paid" ? <div className="payment-state payment-success"><div className="state-icon success-icon"><Check size={30} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment confirmed</div><h2>See you at <em>Talanta.</em></h2><p>{paymentMessage}</p><div className="digital-ticket"><span className="mini-label">DIGITAL TICKET</span><strong>{ticketCode}</strong><span>{selected.name} · {quantity} ticket{quantity > 1 ? "s" : ""}</span><span>05 JAN 2027 · NAIROBI</span></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><Button className="checkout-button" onClick={resetCheckout}>Done</Button></div> : <div className="payment-state payment-cancelled"><div className="state-icon"><X size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment not completed</div><h2>Still time to <em>join us.</em></h2><p>{paymentMessage}</p><Button className="checkout-button" onClick={() => { setPaymentState("idle"); setPaymentMessage(""); }}>Try again</Button></div>}
+              <div className="modal-footnote"><ShieldCheck size={14} /> Daraja credentials stay on the server. Confirmation comes from the Safaricom callback.</div>
+            </> : paymentState === "pending" ? <div className="payment-state payment-pending"><div className="state-icon"><Smartphone size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Waiting for approval</div><h2>Check your <em>phone.</em></h2><p>{paymentMessage}</p><div className="pending-loader"><span /><span /><span /></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><button className="quiet-button" onClick={() => { setPaymentState("cancelled"); setPaymentMessage("The prompt was stopped on this screen. If you already approved it, wait for the callback or contact support with your reference."); }}>I didn’t approve</button></div> : paymentState === "paid" ? <div className="payment-state payment-success"><div className="state-icon success-icon"><Check size={30} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment confirmed</div><h2>See you at <em>Talanta.</em></h2><p>{paymentMessage}</p><div className="digital-ticket"><span className="mini-label">DIGITAL TICKET</span><strong>{ticketCode}</strong><span>{selected.name} · {quantity} ticket{quantity > 1 ? "s" : ""}</span><span>05 JAN 2027 · NAIROBI</span></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><Button className="checkout-button" onClick={resetCheckout}>Done</Button></div> : <div className="payment-state payment-cancelled"><div className="state-icon"><X size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment not completed</div><h2>Try again.</h2><p>{paymentMessage}</p><Button className="checkout-button" onClick={() => { setPaymentState("idle"); setPaymentMessage(""); }}>Try again</Button></div>}
           </div>
         </div>
       )}
