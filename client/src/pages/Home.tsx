@@ -112,7 +112,10 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, category: selected.name, quantity, amount: total }),
       });
-      const body = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      const body = contentType.includes("application/json")
+        ? await response.json()
+        : { error: `The payment service returned an unexpected response (${response.status}). Refresh the page and try again.` };
       if (!response.ok) throw new Error(body.error || "We could not start the payment prompt.");
       setOrderCode(body.orderCode);
       setPaymentState("pending");

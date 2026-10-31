@@ -27,6 +27,7 @@ async function startServer() {
       createContext,
     })
   );
+  app.use("/api", (_req, res) => res.status(404).json({ error: "API route not found." }));
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
