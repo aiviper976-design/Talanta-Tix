@@ -53,13 +53,25 @@ function assertDarajaConfig() {
   return config as Required<typeof config>;
 }
 
+async function readDarajaJson<T>(response: Response, operation: string): Promise<T> {
+  const raw = await response.text();
+  if (!raw.trim()) {
+    throw new Error(`${operation} returned an empty response (HTTP ${response.status}). Verify DARAJA_ENV and the Daraja app configuration.`);
+  }
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error(`${operation} returned a non-JSON response (HTTP ${response.status}). Verify DARAJA_ENV and the Daraja endpoint configuration.`);
+  }
+}
+
 async function getAccessToken(config: Required<ReturnType<typeof darajaConfig>>) {
   const basic = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString("base64");
   const response = await fetch(`${config.baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
     headers: { Authorization: `Basic ${basic}` },
   });
-  const body = await response.json() as { access_token?: string; errorMessage?: string };
-  if (!response.ok || !body.access_token) throw new Error(body.errorMessage || "Unable to obtain a Daraja access token");
+  const body = await readDarajaJson<{ access_token?: string; errorMessage?: string }>(response, "Daraja OAuth");
+  if (!response.ok || !body.access_token) throw new Error(body.errorMessage || `Daraja OAuth did not return an access token (HTTP ${response.status}).`);
   return body.access_token;
 }
 
@@ -157,7 +169,7 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
         TransactionDesc: `Talanta Tix ${String(category).slice(0, 30)}`,
       }),
     });
-    const body = await response.json() as { MerchantRequestID?: string; CheckoutRequestID?: string; ResponseCode?: string; ResponseDescription?: string; CustomerMessage?: string };
+    const body = await readDarajaJson<{ MerchantRequestID?: string; CheckoutRequestID?: string; ResponseCode?: string; ResponseDescription?: string; CustomerMessage?: string }>(response, "Daraja STK Push");
     if (!response.ok || body.ResponseCode !== "0" || !body.CheckoutRequestID) {
       await updateOrder(order.orderCode, { status: "failed", resultDescription: body.ResponseDescription || "STK Push was not accepted" });
       return res.status(502).json({ error: body.ResponseDescription || "M-Pesa could not start the payment prompt." });
@@ -169,6 +181,7 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
     const message = error instanceof Error ? error.message : "Unable to start payment.";
     console.error("[Daraja] STK Push error:", message);
     if (message.startsWith("Daraja is not configured")) return res.status(503).json({ error: "M-Pesa checkout is not configured yet. Add the protected Daraja settings before launch." });
+    if (message.startsWith("Daraja OAuth") || message.startsWith("Daraja STK Push")) return res.status(502).json({ error: message });
     return res.status(502).json({ error: "We could not start the M-Pesa prompt. Please try again." });
   }
 });
