@@ -30,6 +30,8 @@ type TicketOption = {
 type PaymentState = "idle" | "starting" | "pending" | "paid" | "cancelled" | "failed";
 
 const saleDeadline = "25 NOV 2026";
+const saleEndsAt = "2026-11-25T23:59:59+03:00";
+const matchStartsAt = "2027-01-05T00:00:00+03:00";
 const ticketOptions: TicketOption[] = [
   { id: "early-bird", name: "Early Bird", price: 500, tag: "Flash sale", note: `Limited allocation · valid till ${saleDeadline}`, accent: "orange" },
   { id: "north-stand", name: "North Stand", price: 1800, tag: "Matchday", note: "Upper tier · full-pitch view", accent: "orange" },
@@ -39,6 +41,21 @@ const ticketOptions: TicketOption[] = [
 
 const formatKes = (value: number) => `KSh ${value.toLocaleString("en-KE")}`;
 const makeIdempotencyKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+type Countdown = { days: number; hours: number; minutes: number; seconds: number; total: number };
+const getCountdown = (target: string): Countdown => {
+  const total = Math.max(0, new Date(target).getTime() - Date.now());
+  const seconds = Math.floor(total / 1000);
+  return { total, days: Math.floor(seconds / 86400), hours: Math.floor((seconds % 86400) / 3600), minutes: Math.floor((seconds % 3600) / 60), seconds: seconds % 60 };
+};
+const pad = (value: number) => value.toString().padStart(2, "0");
+
+function CountdownDigits({ value, includeDays = false }: { value: Countdown; includeDays?: boolean }) {
+  const displayedHours = includeDays ? value.hours : Math.floor(value.total / 3600000);
+  return <div className={`countdown-digits ${includeDays ? "countdown-match" : "countdown-sale"}`} aria-live="polite">
+    {includeDays && <><strong>{value.days}</strong><small>days</small><span>:</span></>}
+    <strong>{pad(displayedHours)}</strong><small>hours</small><span>:</span><strong>{pad(value.minutes)}</strong><small>minutes</small><span>:</span><strong>{pad(value.seconds)}</strong><small>seconds</small>
+  </div>;
+}
 
 function TicketMark({ small = false }: { small?: boolean }) {
   return (
@@ -61,6 +78,17 @@ export default function Home() {
   const [idempotencyKey, setIdempotencyKey] = useState(makeIdempotencyKey);
   const [paymentMessage, setPaymentMessage] = useState("");
   const [form, setForm] = useState({ buyerName: "", email: "", phone: "" });
+  const [saleCountdown, setSaleCountdown] = useState(() => getCountdown(saleEndsAt));
+  const [matchCountdown, setMatchCountdown] = useState(() => getCountdown(matchStartsAt));
+
+  useEffect(() => {
+    const updateCountdowns = () => {
+      setSaleCountdown(getCountdown(saleEndsAt));
+      setMatchCountdown(getCountdown(matchStartsAt));
+    };
+    const timer = window.setInterval(updateCountdowns, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const selected = ticketOptions.find(ticket => ticket.id === selectedId) ?? ticketOptions[0];
   const subtotal = selected.price * quantity;
@@ -252,6 +280,7 @@ export default function Home() {
               <div className="reference-kicker">RAILA ODINGA INTERNATIONAL STADIUM<br /><span>AT TALANTA SPORTS CITY</span><small>NAIROBI · KENYA</small></div>
               <h1>BAYERN<br />MUNICH <b>VS</b><br /><span>AJAX</span></h1>
               <div className="lean-date">5TH JANUARY 2027</div>
+              <div className="hero-countdown"><span>Match starts in</span><CountdownDigits value={matchCountdown} includeDays /></div>
               <p>EARLY BIRD TICKETS FROM KSh 500</p>
               <button className="hero-buy" onClick={scrollToTickets}>Get tickets <ArrowUpRight size={18} /></button>
             </div>
@@ -259,12 +288,13 @@ export default function Home() {
               <img src="/assets/bayern-ajax-match.webp" alt="Bayern Munich versus Ajax match artwork" />
             </figure>
           </div>
-          <div className="flash-ribbon"><span>FLASH SALE</span><strong>Early birds from KSh 500</strong><small>Valid till {saleDeadline}</small></div>
+          <div className="flash-ribbon"><span>FLASH SALE</span><strong>Early birds from KSh 500</strong><div className="flash-countdown"><small>Ends in</small><CountdownDigits value={saleCountdown} /></div><small>Valid till {saleDeadline}</small></div>
         </section>
 
         <section className="lean-tickets page-width" id="tickets">
           <div className="tickets-topline">
             <div><span className="section-eyebrow">Tickets on sale now</span><h2>Pick your<br /><em>seat.</em></h2></div>
+            <div className="match-countdown-card"><span>COUNTDOWN TO MATCH</span><CountdownDigits value={matchCountdown} includeDays /></div>
             <div className="sale-note"><strong>EARLY BIRD · KSh 500</strong><span>Limited allocation · valid till {saleDeadline}</span></div>
           </div>
           <div className="lean-ticket-layout">
