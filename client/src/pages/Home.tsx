@@ -82,6 +82,10 @@ export default function Home() {
   const [matchCountdown, setMatchCountdown] = useState(() => getCountdown(matchStartsAt));
 
   useEffect(() => {
+    document.title = "Buy Bayern vs Ajax Tickets in Nairobi | Talanta Tix";
+  }, []);
+
+  useEffect(() => {
     const updateCountdowns = () => {
       setSaleCountdown(getCountdown(saleEndsAt));
       setMatchCountdown(getCountdown(matchStartsAt));
