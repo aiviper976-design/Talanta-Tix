@@ -234,18 +234,20 @@ export default function Home() {
     context.fillStyle = "#ffffff";
     context.font = "700 38px Arial";
     context.fillText(`${selected.name} · ${quantity} ticket${quantity > 1 ? "s" : ""}`, 70, 585);
+    context.font = "700 30px Arial";
+    context.fillText(`Name: ${form.buyerName}`, 70, 640);
     context.font = "28px Arial";
     context.fillStyle = "#d7d7d7";
-    context.fillText(`Order ${orderCode}`, 70, 660);
-    context.fillText(`Total paid ${formatKes(total)}`, 70, 710);
-    context.fillText("Scan to verify this ticket", 70, 760);
+    context.fillText(`Order ${orderCode}`, 70, 700);
+    context.fillText(`Total paid ${formatKes(total)}`, 70, 750);
+    context.fillText("Scan to verify this ticket", 70, 800);
     context.fillStyle = "#ffffff";
-    context.fillRect(70, 820, 340, 340);
-    context.drawImage(qrImage, 100, 850, 280, 280);
+    context.fillRect(70, 860, 340, 340);
+    context.drawImage(qrImage, 100, 890, 280, 280);
     context.fillStyle = "#d7d7d7";
     context.font = "24px monospace";
-    context.fillText("DIGITAL ENTRY TICKET", 520, 930);
-    context.fillText("Verified after M-Pesa callback", 520, 980);
+    context.fillText("DIGITAL ENTRY TICKET", 520, 970);
+    context.fillText("Verified after M-Pesa callback", 520, 1020);
     const url = canvas.toDataURL("image/png");
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -343,7 +345,7 @@ export default function Home() {
                 <Button type="submit" className="checkout-button payment-submit-button" disabled={paymentState === "starting"}>{paymentState === "starting" ? "Processing…" : "Pay"}<ArrowUpRight size={17} /></Button>
               </form>
               <div className="modal-footnote"><ShieldCheck size={14} /> Daraja credentials stay on the server. Confirmation comes from the Safaricom callback.</div>
-            </> : paymentState === "pending" ? <div className="payment-state payment-pending"><div className="state-icon"><Smartphone size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Waiting for approval</div><h2>Check your <em>phone.</em></h2><p>{paymentMessage}</p><div className="pending-loader"><span /><span /><span /></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><button className="quiet-button" onClick={() => { setPaymentState("cancelled"); setPaymentMessage("The prompt was stopped on this screen. If you already approved it, wait for the callback or contact support with your reference."); }}>I didn’t approve</button></div> : paymentState === "paid" ? <div className="payment-state payment-success"><div className="state-icon success-icon"><Check size={30} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment confirmed</div><h2>See you at <em>Talanta.</em></h2><p>{paymentMessage}</p><div className="digital-ticket"><img className="ticket-match-image" src="/assets/bayern-ajax-match.webp" alt="Bayern Munich versus Ajax match artwork" /><span className="mini-label">DIGITAL TICKET</span><strong>{ticketCode}</strong><span>{selected.name} · {quantity} ticket{quantity > 1 ? "s" : ""}</span><span>05 JAN 2027 · NAIROBI</span>{ticketQr && <img className="ticket-qr" src={ticketQr} alt="QR code for ticket verification" />}</div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><div className="ticket-actions"><Button className="checkout-button" onClick={downloadTicket} disabled={!ticketQr}><Download size={16} /> Download PNG ticket</Button>{ticketToken && <a className="ticket-verify-link" href={`/api/tickets/${ticketToken}`} target="_blank" rel="noreferrer">Verify ticket</a>}</div><Button className="quiet-button" onClick={resetCheckout}>Done</Button></div> : <div className="payment-state payment-cancelled"><div className="state-icon"><X size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment not completed</div><h2>Try again.</h2><p>{paymentMessage}</p><Button className="checkout-button" onClick={() => { setPaymentState("idle"); setPaymentMessage(""); setIdempotencyKey(makeIdempotencyKey()); }}>Try again</Button></div>}
+            </> : paymentState === "pending" ? <div className="payment-state payment-pending"><div className="state-icon"><Smartphone size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Waiting for approval</div><h2>Check your <em>phone.</em></h2><p>{paymentMessage}</p><div className="pending-loader"><span /><span /><span /></div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><button className="quiet-button" onClick={() => { setPaymentState("cancelled"); setPaymentMessage("The prompt was stopped on this screen. If you already approved it, wait for the callback or contact support with your reference."); }}>I didn’t approve</button></div> : paymentState === "paid" ? <div className="payment-state payment-success"><div className="state-icon success-icon"><Check size={30} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment confirmed</div><h2>See you at <em>Talanta.</em></h2><p>{paymentMessage}</p><div className="digital-ticket"><img className="ticket-match-image" src="/assets/bayern-ajax-match.webp" alt="Bayern Munich versus Ajax match artwork" /><span className="mini-label">DIGITAL TICKET</span><strong>{ticketCode}</strong><span className="ticket-buyer-name">Name: {form.buyerName}</span><span>{selected.name} · {quantity} ticket{quantity > 1 ? "s" : ""}</span><span>05 JAN 2027 · NAIROBI</span>{ticketQr && <img className="ticket-qr" src={ticketQr} alt="QR code for ticket verification" />}</div><div className="order-reference">Order reference <strong>{orderCode}</strong></div><div className="ticket-actions"><Button className="checkout-button" onClick={downloadTicket} disabled={!ticketQr}><Download size={16} /> Download PNG ticket</Button>{ticketToken && <a className="ticket-verify-link" href={`/api/tickets/${ticketToken}`} target="_blank" rel="noreferrer">Verify ticket</a>}</div><Button className="quiet-button" onClick={resetCheckout}>Done</Button></div> : <div className="payment-state payment-cancelled"><div className="state-icon"><X size={28} /></div><div className="eyebrow"><span className="eyebrow-line dark" /> Payment not completed</div><h2>Try again.</h2><p>{paymentMessage}</p><Button className="checkout-button" onClick={() => { setPaymentState("idle"); setPaymentMessage(""); setIdempotencyKey(makeIdempotencyKey()); }}>Try again</Button></div>}
           </div>
         </div>
       )}
