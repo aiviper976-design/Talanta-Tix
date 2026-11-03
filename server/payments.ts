@@ -79,6 +79,7 @@ function notifyStatus(order: Order, status: "stk_initiated" | "paid" | "cancelle
     resultCode: order.resultCode,
     resultDescription: order.resultDescription,
     ticketCode: order.status === "paid" ? ticketCodeFor(order) : null,
+    ticketToken: order.status === "paid" ? order.ticketToken : null,
     ...extra,
   };
   void notifyPaymentStatus(notification).catch(error => console.warn("[Notifications] Payment status notification failed:", error instanceof Error ? error.message : "unknown error"));

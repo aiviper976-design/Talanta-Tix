@@ -31,6 +31,7 @@ describe("purchase notifications", () => {
       status: "paid",
       ticketCode: "ENTRY-TT-TEST",
       receipt: "QAB123XYZ",
+      ticketToken: "secure-ticket-token",
     });
     expect(text).toContain("Talanta Tix — your ticket is confirmed");
     expect(text).toContain("Hello Amina Otieno,");

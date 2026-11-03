@@ -1,5 +1,10 @@
-import { notifyOwner } from "./_core/notification";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
+import sharp from "sharp";
 import nodemailer from "nodemailer";
+import { notifyOwner } from "./_core/notification";
 
 const DEFAULT_NOTIFICATION_TITLE = "Talanta Tix — ticket purchase";
 
@@ -21,6 +26,7 @@ export type PaymentStatusNotification = PurchaseAttempt & {
   resultCode?: number | null;
   resultDescription?: string | null;
   ticketCode?: string | null;
+  ticketToken?: string | null;
 };
 
 export type PurchaseNotificationResult = { sent: boolean };
@@ -89,6 +95,43 @@ export function buyerTicketText(payment: PaymentStatusNotification): string {
   ].filter(Boolean).join("\n");
 }
 
+function escapeXml(value: string): string {
+  return value.replace(/[&<>\"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;", "'": "&apos;" })[character] ?? character);
+}
+
+async function createTicketAttachments(payment: PaymentStatusNotification): Promise<Array<{ filename: string; content: Buffer; contentType: string }>> {
+  const publicBaseUrl = process.env.PUBLIC_BASE_URL || "https://talantatix-ofmdtqd7.manus.space";
+  const verificationUrl = payment.ticketToken ? `${publicBaseUrl}/api/tickets/${encodeURIComponent(payment.ticketToken)}` : `${publicBaseUrl}/#verify`;
+  const qrBuffer = await QRCode.toBuffer(verificationUrl, { width: 280, margin: 1, color: { dark: "#111111", light: "#ffffff" } });
+  const assetCandidates = [
+    path.resolve(process.cwd(), "dist/public/assets/bayern-ajax-match.webp"),
+    path.resolve(process.cwd(), "client/public/assets/bayern-ajax-match.webp"),
+  ];
+  let artworkPath = assetCandidates[0];
+  for (const candidate of assetCandidates) {
+    try { await readFile(candidate); artworkPath = candidate; break; } catch { /* try the next deployment path */ }
+  }
+  const artwork = await sharp(artworkPath).resize(1200, 420, { fit: "cover" }).png().toBuffer();
+  const buyer = escapeXml(payment.buyerName);
+  const category = escapeXml(payment.category);
+  const code = escapeXml(payment.ticketCode ?? "ENTRY-PENDING");
+  const order = escapeXml(payment.orderCode);
+  const receipt = escapeXml(payment.receipt ?? "Confirmed by Daraja callback");
+  const detailsSvg = Buffer.from(`<svg width="1200" height="1080" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="1080" fill="#111111"/><rect y="0" width="1200" height="14" fill="#f2c335"/><text x="70" y="100" fill="#f2c335" font-family="Arial" font-size="25" font-weight="700">${code}</text><text x="70" y="175" fill="#ffffff" font-family="Arial" font-size="40" font-weight="700">${category} · ${payment.quantity} ticket${payment.quantity === 1 ? "" : "s"}</text><text x="70" y="235" fill="#ffffff" font-family="Arial" font-size="29" font-weight="700">Name: ${buyer}</text><text x="70" y="295" fill="#d7d7d7" font-family="Arial" font-size="25">Order ${order}</text><text x="70" y="345" fill="#d7d7d7" font-family="Arial" font-size="25">Total paid KSh ${payment.amountKsh.toLocaleString("en-KE")}</text><text x="70" y="395" fill="#f2c335" font-family="Arial" font-size="23">M-Pesa receipt: ${receipt}</text><text x="70" y="465" fill="#ffffff" font-family="Arial" font-size="22">Scan to verify this ticket</text><rect x="70" y="510" width="340" height="340" fill="#ffffff"/><text x="520" y="620" fill="#d7d7d7" font-family="monospace" font-size="24">DIGITAL ENTRY TICKET</text><text x="520" y="670" fill="#d7d7d7" font-family="monospace" font-size="21">5 JANUARY 2027 · NAIROBI</text><text x="520" y="720" fill="#d7d7d7" font-family="monospace" font-size="18">Raila Odinga International Stadium</text><text x="520" y="770" fill="#d7d7d7" font-family="monospace" font-size="18">Verified after Safaricom M-Pesa callback</text></svg>`);
+  const heroSvg = Buffer.from(`<svg width="1200" height="420" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="420" fill="#111111" fill-opacity=".56"/><text x="70" y="260" fill="#ffffff" font-family="Arial" font-size="58" font-weight="700">BAYERN MUNICH VS AJAX</text><text x="70" y="320" fill="#f2c335" font-family="monospace" font-size="28" font-weight="700">5 JANUARY 2027 · NAIROBI</text><text x="70" y="365" fill="#ffffff" font-family="Arial" font-size="30" font-weight="700">RAILA ODINGA INTERNATIONAL STADIUM</text></svg>`);
+  const png = await sharp({ create: { width: 1200, height: 1500, channels: 4, background: "#111111" } }).composite([{ input: artwork, top: 0, left: 0 }, { input: heroSvg, top: 0, left: 0 }, { input: detailsSvg, top: 420, left: 0 }, { input: qrBuffer, top: 990, left: 100 }]).png().toBuffer();
+  const pdfChunks: Buffer[] = [];
+  const document = new PDFDocument({ autoFirstPage: false, size: [600, 750], margin: 0 });
+  document.on("data", chunk => pdfChunks.push(Buffer.from(chunk)));
+  const pdfReady = new Promise<Buffer>((resolve, reject) => { document.on("end", () => resolve(Buffer.concat(pdfChunks))); document.on("error", reject); });
+  document.addPage({ size: [600, 750], margin: 0 });
+  document.image(png, 0, 0, { width: 600, height: 750 });
+  document.end();
+  const pdf = await pdfReady;
+  const baseName = `talanta-tix-${payment.ticketCode}`;
+  return [{ filename: `${baseName}.png`, content: png, contentType: "image/png" }, { filename: `${baseName}.pdf`, content: pdf, contentType: "application/pdf" }];
+}
+
 async function sendBuyerTicketEmail(payment: PaymentStatusNotification): Promise<PurchaseNotificationResult> {
   if (payment.status !== "paid" || !payment.ticketCode) return { sent: false };
   const host = process.env.SMTP_HOST;
@@ -109,13 +152,15 @@ async function sendBuyerTicketEmail(payment: PaymentStatusNotification): Promise
       auth: { user, pass: password },
       tls: { minVersion: "TLSv1.2" },
     });
+    const attachments = await createTicketAttachments(payment);
     await transporter.sendMail({
       from,
       to: payment.buyerEmail,
       subject: `Talanta Tix ticket confirmed — ${payment.orderCode}`,
       text: buyerTicketText(payment),
+      attachments,
     });
-    console.info("[Notifications] Plain-text ticket email sent", { orderCode: payment.orderCode, recipientDomain: payment.buyerEmail.split("@")[1] ?? "unknown" });
+    console.info("[Notifications] Plain-text ticket email with PNG and PDF sent", { orderCode: payment.orderCode, recipientDomain: payment.buyerEmail.split("@")[1] ?? "unknown" });
     return { sent: true };
   } catch (error) {
     console.warn("[Notifications] Buyer ticket email failed:", error instanceof Error ? error.message : "unknown error");
