@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { purchaseAttemptText } from "./purchaseNotifications";
+import { buyerTicketText, purchaseAttemptText } from "./purchaseNotifications";
 
 describe("purchase notifications", () => {
   const attempt = {
@@ -23,5 +23,20 @@ describe("purchase notifications", () => {
     expect(text).toContain("Ticket category: Early Bird");
     expect(text).toContain("Quantity: 2");
     expect(text).toContain("Amount: KSh 1,000");
+  });
+
+  it("formats a paid buyer ticket as plain text", () => {
+    const text = buyerTicketText({
+      ...attempt,
+      status: "paid",
+      ticketCode: "ENTRY-TT-TEST",
+      receipt: "QAB123XYZ",
+    });
+    expect(text).toContain("Talanta Tix — your ticket is confirmed");
+    expect(text).toContain("Hello Amina Otieno,");
+    expect(text).toContain("Ticket code: ENTRY-TT-TEST");
+    expect(text).toContain("M-Pesa receipt: QAB123XYZ");
+    expect(text).not.toContain(".png");
+    expect(text).not.toContain(".pdf");
   });
 });

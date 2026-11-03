@@ -9,7 +9,7 @@ import {
   normalizePhone,
   type DarajaCallbackResult,
 } from "./lib/daraja";
-import { notifyPaymentStatus, notifyPurchaseAttempt } from "./purchaseNotifications";
+import { notifyBuyerTicketEmail, notifyPaymentStatus, notifyPurchaseAttempt } from "./purchaseNotifications";
 
 export type TicketOrderStatus = "pending" | "paid" | "cancelled" | "failed" | "expired";
 
@@ -64,7 +64,7 @@ function getRateLimitRetryAfter(req: Request, phone: string) {
 }
 
 function notifyStatus(order: Order, status: "stk_initiated" | "paid" | "cancelled" | "failed" | "expired", extra: Partial<Parameters<typeof notifyPaymentStatus>[0]> = {}) {
-  void notifyPaymentStatus({
+  const notification = {
     orderCode: order.orderCode,
     buyerName: order.buyerName,
     buyerEmail: order.email,
@@ -80,7 +80,9 @@ function notifyStatus(order: Order, status: "stk_initiated" | "paid" | "cancelle
     resultDescription: order.resultDescription,
     ticketCode: order.status === "paid" ? ticketCodeFor(order) : null,
     ...extra,
-  }).catch(error => console.warn("[Notifications] Payment status notification failed:", error instanceof Error ? error.message : "unknown error"));
+  };
+  void notifyPaymentStatus(notification).catch(error => console.warn("[Notifications] Payment status notification failed:", error instanceof Error ? error.message : "unknown error"));
+  if (status === "paid") void notifyBuyerTicketEmail(notification).catch(error => console.warn("[Notifications] Buyer ticket email failed:", error instanceof Error ? error.message : "unknown error"));
 }
 
 async function createOrder(input: NewTicketOrder): Promise<Order> {

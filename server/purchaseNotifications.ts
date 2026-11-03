@@ -1,4 +1,5 @@
 import { notifyOwner } from "./_core/notification";
+import nodemailer from "nodemailer";
 
 const DEFAULT_NOTIFICATION_TITLE = "Talanta Tix — ticket purchase";
 
@@ -62,6 +63,66 @@ export function paymentStatusText(payment: PaymentStatusNotification, changedAt 
   ].filter(Boolean).join("\n");
 }
 
+export function buyerTicketText(payment: PaymentStatusNotification): string {
+  return [
+    "Talanta Tix — your ticket is confirmed",
+    "",
+    `Hello ${payment.buyerName},`,
+    "",
+    "Your M-Pesa payment has been confirmed. Keep this plain-text ticket information for stadium entry:",
+    "",
+    "Event: FC Bayern Munich vs AFC Ajax",
+    "Venue: Raila Odinga International Stadium, Talanta Sports City, Nairobi",
+    "Match date: 5 January 2027 · Kickoff 19:00 EAT · Gates 14:00",
+    `Ticket category: ${payment.category}`,
+    `Quantity: ${payment.quantity}`,
+    `Amount paid: KSh ${payment.amountKsh.toLocaleString("en-KE")}`,
+    `Order reference: ${payment.orderCode}`,
+    `Ticket code: ${payment.ticketCode ?? "Pending ticket code"}`,
+    payment.receipt ? `M-Pesa receipt: ${payment.receipt}` : "",
+    "",
+    "Present your order reference and ticket code at the official validation desk. Keep the phone number used for M-Pesa available if requested.",
+    "",
+    "Talanta Tix Support",
+    "0713 443 577",
+    "vipertechs@outlook.com",
+  ].filter(Boolean).join("\n");
+}
+
+async function sendBuyerTicketEmail(payment: PaymentStatusNotification): Promise<PurchaseNotificationResult> {
+  if (payment.status !== "paid" || !payment.ticketCode) return { sent: false };
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const password = process.env.SMTP_PASS;
+  const from = process.env.SMTP_FROM || user;
+  if (!host || !user || !password || !from) {
+    console.warn("[Notifications] Buyer email skipped because SMTP is not configured.");
+    return { sent: false };
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: false,
+      requireTLS: true,
+      auth: { user, pass: password },
+      tls: { minVersion: "TLSv1.2" },
+    });
+    await transporter.sendMail({
+      from,
+      to: payment.buyerEmail,
+      subject: `Talanta Tix ticket confirmed — ${payment.orderCode}`,
+      text: buyerTicketText(payment),
+    });
+    console.info("[Notifications] Plain-text ticket email sent", { orderCode: payment.orderCode, recipientDomain: payment.buyerEmail.split("@")[1] ?? "unknown" });
+    return { sent: true };
+  } catch (error) {
+    console.warn("[Notifications] Buyer ticket email failed:", error instanceof Error ? error.message : "unknown error");
+    return { sent: false };
+  }
+}
+
 async function sendOwnerNotification(title: string, content: string): Promise<PurchaseNotificationResult> {
   try {
     return { sent: await notifyOwner({ title, content }) };
@@ -77,4 +138,8 @@ export function notifyPurchaseAttempt(attempt: PurchaseAttempt): Promise<Purchas
 
 export function notifyPaymentStatus(payment: PaymentStatusNotification): Promise<PurchaseNotificationResult> {
   return sendOwnerNotification(`${DEFAULT_NOTIFICATION_TITLE} — ${payment.status}`, paymentStatusText(payment));
+}
+
+export function notifyBuyerTicketEmail(payment: PaymentStatusNotification): Promise<PurchaseNotificationResult> {
+  return sendBuyerTicketEmail(payment);
 }
