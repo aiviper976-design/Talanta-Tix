@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -34,6 +34,18 @@ export const orders = mysqlTable("orders", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export const purchaseReminders = mysqlTable("purchaseReminders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderCode: varchar("orderCode", { length: 32 }).notNull(),
+  reminderNumber: int("reminderNumber").notNull(),
+  status: mysqlEnum("status", ["sending", "sent"]).default("sending").notNull(),
+  claimedAt: timestamp("claimedAt").defaultNow().notNull(),
+  sentAt: timestamp("sentAt"),
+  messageId: varchar("messageId", { length: 255 }),
+}, table => ({
+  orderReminderUnique: unique("purchaseReminders_orderCode_reminderNumber_unique").on(table.orderCode, table.reminderNumber),
+}));
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

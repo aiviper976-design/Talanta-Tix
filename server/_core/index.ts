@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { paymentsRouter } from "../payments";
+import { purchaseReminderHandler } from "../purchaseReminders";
 
 async function startServer() {
   const app = express();
@@ -18,6 +19,7 @@ async function startServer() {
   app.get("/api/platform/config.js", (_req, res) => {
     res.set("Cache-Control", "no-store").type("application/javascript").send(publicPlatformScript());
   });
+  app.post("/api/scheduled/purchase-reminders", purchaseReminderHandler);
   app.use("/api", paymentsRouter);
   registerOAuthRoutes(app);
   app.use(
