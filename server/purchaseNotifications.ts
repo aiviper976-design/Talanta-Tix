@@ -135,15 +135,16 @@ async function createTicketAttachments(payment: PaymentStatusNotification): Prom
 async function sendBuyerTicketEmail(payment: PaymentStatusNotification): Promise<PurchaseNotificationResult> {
   if (payment.status !== "paid" || !payment.ticketCode) return { sent: false };
   const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const password = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || user;
-  if (!host || !user || !password || !from) {
-    console.warn("[Notifications] Buyer email skipped because SMTP is not configured.");
-    return { sent: false };
-  }
+	  const user = process.env.SMTP_USER;
+	  const password = process.env.SMTP_PASS;
+	  const from = process.env.SMTP_FROM || user;
+	  if (!host || !user || !password || !from) {
+	    console.warn("[Notifications] Buyer email skipped because SMTP is not configured.");
+	    return { sent: false };
+	  }
+	  const sender = from.includes("<") ? from : `TALANTA TICKETS <${from}>`;
 
-  try {
+	  try {
     const transporter = nodemailer.createTransport({
       host,
       port: Number(process.env.SMTP_PORT || 587),
@@ -152,10 +153,10 @@ async function sendBuyerTicketEmail(payment: PaymentStatusNotification): Promise
       auth: { user, pass: password },
       tls: { minVersion: "TLSv1.2" },
     });
-    const attachments = await createTicketAttachments(payment);
-    await transporter.sendMail({
-      from,
-      to: payment.buyerEmail,
+	    const attachments = await createTicketAttachments(payment);
+	    await transporter.sendMail({
+	      from: sender,
+	      to: payment.buyerEmail,
       subject: `Talanta Tix ticket confirmed — ${payment.orderCode}`,
       text: buyerTicketText(payment),
       attachments,
