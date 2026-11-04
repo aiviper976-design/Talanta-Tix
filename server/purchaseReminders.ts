@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Request, Response } from "express";
 import { sdk } from "./_core/sdk";
+import { createOrderResumeToken } from "./orderResume";
 
 const REMINDER_DELAY_MS = 3 * 60 * 1000;
 const REMINDER_INTERVAL_MS = 12 * 60 * 60 * 1000;
@@ -52,6 +53,7 @@ function createTransport() {
 
 function reminderText(order: any, reminderNumber: number) {
   const reminderLabel = reminderNumber === 0 ? "first reminder" : `reminder ${reminderNumber + 1}`;
+  const resumeUrl = `${SITE_URL}/?resume=${encodeURIComponent(createOrderResumeToken(order.orderCode))}`;
   return [
     "Talanta Tix — complete your ticket purchase",
     "",
@@ -66,7 +68,7 @@ function reminderText(order: any, reminderNumber: number) {
     `Attempt started: ${formatDate(order.createdAt)}`,
     `Current status: ${order.status}`,
     "",
-    `Complete your purchase at: ${SITE_URL}`,
+    `Resume your checkout directly: ${resumeUrl}`,
     "",
     "Event: FC Bayern Munich vs AFC Ajax",
     "Venue: Raila Odinga International Stadium, Talanta Sports City, Nairobi",

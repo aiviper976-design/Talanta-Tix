@@ -58,6 +58,34 @@ export default function Home() {
   const mapInfo = { north: ["North Stand", "North Stand (Upper Tier)", "Gate B", "Panoramic elevated view behind northern goal"], south: ["South Stand / Early Bird", "South Stand (Upper Tier)", "Gate C & D", "Open seating with fan-zone atmosphere"], east: ["East Stand", "East Stand (Lower Tier - Halfway line)", "Gate A", "Closest to the player dugouts"], west: ["West Grandstand & VIP", "Premium Reserved", "VIP Gate 1", "Central padded seating and hospitality"] }[mapZone] ?? ["North Stand", "North Stand (Upper Tier)", "Gate B", "Panoramic elevated view behind northern goal"];
 
   useEffect(() => { document.title = "FC Bayern Munich vs AFC Ajax Tickets | Talanta Sports City Nairobi | Talanta Tix"; }, []);
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("resume");
+    if (!token) return;
+    let active = true;
+    fetch(`/api/orders/resume/${encodeURIComponent(token)}`)
+      .then(async response => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "This purchase link is no longer available.");
+        return body;
+      })
+      .then(body => {
+        if (!active) return;
+        const tier = tiers.find(item => item.name === body.category);
+        if (tier) setSelectedId(tier.id);
+        setQuantity(Math.min(10, Math.max(1, Number(body.quantity) || 1)));
+        setForm({ buyerName: body.buyerName || "", email: body.email || "", phone: body.phone || "" });
+        setIdempotencyKey(makeIdempotencyKey());
+        setCheckoutOpen(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      })
+      .catch(error => {
+        if (!active) return;
+        setCheckoutOpen(true);
+        setPaymentState("failed");
+        setPaymentMessage(error instanceof Error ? error.message : "This purchase link is no longer available.");
+      });
+    return () => { active = false; };
+  }, []);
   useEffect(() => { const timer = window.setInterval(() => { setMatchCountdown(getCountdown(matchStartsAt)); setSaleCountdown(getCountdown(saleEndsAt)); }, 1000); return () => window.clearInterval(timer); }, []);
   useEffect(() => {
     if (paymentState !== "pending" || !orderCode) return;

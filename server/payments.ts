@@ -10,6 +10,7 @@ import {
   type DarajaCallbackResult,
 } from "./lib/daraja";
 import { notifyBuyerTicketEmail, notifyPaymentStatus, notifyPurchaseAttempt } from "./purchaseNotifications";
+import { verifyOrderResumeToken } from "./orderResume";
 
 export type TicketOrderStatus = "pending" | "paid" | "cancelled" | "failed" | "expired";
 
@@ -193,6 +194,23 @@ async function expireIfNeeded(order: Order) {
 
 export const normalizeKenyanPhone = normalizePhone;
 export const paymentsRouter = Router();
+
+paymentsRouter.get("/orders/resume/:token", async (req, res) => {
+  const verified = verifyOrderResumeToken(req.params.token);
+  if (!verified) return res.status(404).json({ error: "This purchase link has expired or is invalid." });
+  const order = await findOrder(verified.orderCode);
+  if (!order || order.status === "paid") return res.status(404).json({ error: "This purchase is no longer available to resume." });
+  return res.json({
+    orderCode: order.orderCode,
+    buyerName: order.buyerName,
+    email: order.email,
+    phone: order.phone,
+    category: order.category,
+    quantity: order.quantity,
+    amount: order.amount,
+    status: order.status,
+  });
+});
 
 paymentsRouter.post("/orders/stk-push", async (req, res) => {
   let createdOrder: Order | undefined;
