@@ -18,6 +18,7 @@ export type NewTicketOrder = {
   buyerName: string;
   email: string;
   phone: string;
+  whatsappOptIn: boolean;
   category: string;
   quantity: number;
   amount: number;
@@ -29,6 +30,12 @@ const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 const ORDER_TTL_MS = 15 * 60 * 1000;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT = 5;
+const ticketPricing: Record<string, { price: number; soldOut?: boolean }> = {
+  "Level 3 · Section 416": { price: 2500, soldOut: true },
+  "Level 3 · Section 415": { price: 3500 },
+  "Level 3 · Sections 414 & 412": { price: 5000 },
+  "Level 2 · Sections 207–214": { price: 20000 },
+};
 
 function makeOrderCode() {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -95,6 +102,7 @@ async function createOrder(input: NewTicketOrder): Promise<Order> {
     buyerName: input.buyerName,
     email: input.email,
     phone: input.phone,
+    whatsappOptIn: input.whatsappOptIn ? 1 : 0,
     category: input.category,
     quantity: input.quantity,
     amount: input.amount,
@@ -205,6 +213,7 @@ paymentsRouter.get("/orders/resume/:token", async (req, res) => {
     buyerName: order.buyerName,
     email: order.email,
     phone: order.phone,
+    whatsappOptIn: Boolean(order.whatsappOptIn),
     category: order.category,
     quantity: order.quantity,
     amount: order.amount,
@@ -216,6 +225,7 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
   let createdOrder: Order | undefined;
   try {
     const { buyerName, email, phone, category, quantity, amount } = req.body ?? {};
+    const whatsappOptIn = req.body?.whatsappOptIn === true || req.body?.whatsappOptIn === "true";
     let normalizedPhone: string;
     try {
       normalizedPhone = normalizePhone(String(phone ?? ""));
@@ -225,11 +235,19 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
     const safeQuantity = Number(quantity);
     const safeAmount = Number(amount);
     const idempotencyKey = String(req.body?.idempotencyKey ?? "").trim();
+    const selectedTicket = ticketPricing[String(category ?? "")];
 
     if (!buyerName || String(buyerName).trim().length < 2) return res.status(400).json({ error: "Enter the purchaser's full name." });
     if (!/^\S+@\S+\.\S+$/.test(String(email ?? ""))) return res.status(400).json({ error: "Enter a valid email address." });
     if (!category || !Number.isInteger(safeQuantity) || safeQuantity < 1 || safeQuantity > 10 || !Number.isInteger(safeAmount) || safeAmount < 1) {
       return res.status(400).json({ error: "Review the ticket selection and try again." });
+    }
+    if (!selectedTicket || selectedTicket.soldOut) {
+      return res.status(400).json({ error: "That ticket category is sold out or unavailable." });
+    }
+    const expectedAmount = Math.round(selectedTicket.price * safeQuantity * 1.04);
+    if (safeAmount !== expectedAmount) {
+      return res.status(400).json({ error: "The ticket price has changed. Refresh the page and review your order." });
     }
     if (!/^[A-Za-z0-9_-]{16,96}$/.test(idempotencyKey)) return res.status(400).json({ error: "Refresh the checkout and try again." });
 
@@ -248,12 +266,13 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
       return res.status(409).json({ error: "This checkout attempt has already ended. Start a new payment attempt." });
     }
 
-    createdOrder = await createOrder({ buyerName: String(buyerName).trim(), email: String(email).trim(), phone: normalizedPhone, category: String(category), quantity: safeQuantity, amount: safeAmount, idempotencyKey });
+    createdOrder = await createOrder({ buyerName: String(buyerName).trim(), email: String(email).trim(), phone: normalizedPhone, whatsappOptIn, category: String(category), quantity: safeQuantity, amount: safeAmount, idempotencyKey });
     void notifyPurchaseAttempt({
       orderCode: createdOrder.orderCode,
       buyerName: createdOrder.buyerName,
       buyerEmail: createdOrder.email,
       phoneNumber: createdOrder.phone,
+      whatsappOptIn: Boolean(createdOrder.whatsappOptIn),
       category: createdOrder.category,
       quantity: createdOrder.quantity,
       amountKsh: createdOrder.amount,

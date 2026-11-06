@@ -13,6 +13,7 @@ export type PurchaseAttempt = {
   buyerName: string;
   buyerEmail: string;
   phoneNumber: string;
+  whatsappOptIn?: boolean;
   category: string;
   quantity: number;
   amountKsh: number;
@@ -37,6 +38,7 @@ function attemptLines(attempt: PurchaseAttempt): string[] {
     `Customer name: ${attempt.buyerName}`,
     `Customer email: ${attempt.buyerEmail}`,
     `M-Pesa phone: ${attempt.phoneNumber}`,
+    `WhatsApp reminders opted in: ${attempt.whatsappOptIn ? "yes" : "no"}`,
     `Ticket category: ${attempt.category}`,
     `Quantity: ${attempt.quantity}`,
     `Amount: KSh ${attempt.amountKsh.toLocaleString("en-KE")}`,

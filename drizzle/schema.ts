@@ -18,6 +18,7 @@ export const orders = mysqlTable("orders", {
   buyerName: varchar("buyerName", { length: 160 }).notNull(),
   email: varchar("email", { length: 320 }).notNull(),
   phone: varchar("phone", { length: 16 }).notNull(),
+  whatsappOptIn: int("whatsappOptIn").default(0).notNull(),
   category: varchar("category", { length: 80 }).notNull(),
   quantity: int("quantity").notNull(),
   amount: int("amount").notNull(),
@@ -43,6 +44,7 @@ export const purchaseReminders = mysqlTable("purchaseReminders", {
   claimedAt: timestamp("claimedAt").defaultNow().notNull(),
   sentAt: timestamp("sentAt"),
   messageId: varchar("messageId", { length: 255 }),
+  whatsappMessageId: varchar("whatsappMessageId", { length: 255 }),
 }, table => ({
   orderReminderUnique: unique("purchaseReminders_orderCode_reminderNumber_unique").on(table.orderCode, table.reminderNumber),
 }));

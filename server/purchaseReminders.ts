@@ -6,6 +6,7 @@ import path from "node:path";
 import type { Request, Response } from "express";
 import { sdk } from "./_core/sdk";
 import { createOrderResumeToken } from "./orderResume";
+import { isWhatsAppConfigured, sendWhatsAppReminder } from "./whatsapp";
 
 const REMINDER_DELAY_MS = 3 * 60 * 1000;
 const REMINDER_INTERVAL_MS = 12 * 60 * 60 * 1000;
@@ -83,20 +84,54 @@ function reminderText(order: any, reminderNumber: number) {
 }
 
 async function sendReminder(order: any, reminderNumber: number) {
-  const { transporter, from } = createTransport();
-  const info = await transporter.sendMail({
-    from,
-    to: order.email,
-    bcc: OWNER_BCC,
-    subject: "Reminder: complete your Bayern vs Ajax ticket purchase",
-    text: reminderText(order, reminderNumber),
-    attachments: [{
-      filename: "bayern-vs-ajax-match-poster.webp",
-      path: posterPath(),
-      contentType: "image/webp",
-    }],
-  });
-  return info.messageId || null;
+  const resumeUrl = `${SITE_URL}/?resume=${encodeURIComponent(createOrderResumeToken(order.orderCode))}`;
+  let emailMessageId: string | null = null;
+  let whatsappMessageId: string | null = null;
+  let emailError: unknown = null;
+  let whatsappError: unknown = null;
+
+  try {
+    const { transporter, from } = createTransport();
+    const info = await transporter.sendMail({
+      from,
+      to: order.email,
+      bcc: OWNER_BCC,
+      subject: "Reminder: complete your Bayern vs Ajax ticket purchase",
+      text: reminderText(order, reminderNumber),
+      attachments: [{
+        filename: "bayern-vs-ajax-match-poster.webp",
+        path: posterPath(),
+        contentType: "image/webp",
+      }],
+    });
+    emailMessageId = info.messageId || null;
+  } catch (error) {
+    emailError = error;
+  }
+
+  if (Boolean(order.whatsappOptIn) && isWhatsAppConfigured()) {
+    try {
+      whatsappMessageId = await sendWhatsAppReminder({
+        recipientPhone: order.phone,
+        buyerName: order.buyerName,
+        orderCode: order.orderCode,
+        category: order.category,
+        quantity: Number(order.quantity),
+        amountKsh: Number(order.amount),
+        resumeUrl,
+      });
+    } catch (error) {
+      whatsappError = error;
+    }
+  }
+
+  if (!emailMessageId && !whatsappMessageId) {
+    const details = [emailError, whatsappError].filter(Boolean).map(error => error instanceof Error ? error.message : String(error));
+    throw new Error(details.join("; ") || "No reminder delivery channel is available.");
+  }
+  if (emailError) console.warn("[Purchase reminders] Email delivery failed:", emailError instanceof Error ? emailError.message : emailError);
+  if (whatsappError) console.warn("[Purchase reminders] WhatsApp delivery failed:", whatsappError instanceof Error ? whatsappError.message : whatsappError);
+  return { emailMessageId, whatsappMessageId };
 }
 
 export async function runPurchaseReminderSweep(now = new Date()) {
@@ -113,7 +148,7 @@ export async function runPurchaseReminderSweep(now = new Date()) {
   try {
     await db.query("DELETE FROM purchaseReminders WHERE status = 'sending' AND claimedAt < DATE_SUB(NOW(), INTERVAL 15 MINUTE)");
     const [orders] = await db.query<any[]>(
-      "SELECT orderCode,buyerName,email,category,quantity,amount,status,createdAt FROM orders WHERE status <> 'paid' AND category NOT LIKE 'TEST %' AND email <> '' AND createdAt >= ? AND createdAt <= ? ORDER BY createdAt ASC",
+      "SELECT orderCode,buyerName,email,phone,whatsappOptIn,category,quantity,amount,status,createdAt FROM orders WHERE status <> 'paid' AND category NOT LIKE 'TEST %' AND email <> '' AND createdAt >= ? AND createdAt <= ? ORDER BY createdAt ASC",
       [minCreatedAt, maxCreatedAt],
     );
 
@@ -147,8 +182,8 @@ export async function runPurchaseReminderSweep(now = new Date()) {
       }
 
       try {
-        const messageId = await sendReminder(order, nextReminderNumber);
-        await db.query("UPDATE purchaseReminders SET status = 'sent', sentAt = NOW(), messageId = ? WHERE orderCode = ? AND reminderNumber = ?", [messageId, order.orderCode, nextReminderNumber]);
+        const delivery = await sendReminder(order, nextReminderNumber);
+        await db.query("UPDATE purchaseReminders SET status = 'sent', sentAt = NOW(), messageId = ?, whatsappMessageId = ? WHERE orderCode = ? AND reminderNumber = ?", [delivery.emailMessageId, delivery.whatsappMessageId, order.orderCode, nextReminderNumber]);
         sent += 1;
       } catch (error) {
         await db.query("DELETE FROM purchaseReminders WHERE orderCode = ? AND reminderNumber = ? AND status = 'sending'", [order.orderCode, nextReminderNumber]);
