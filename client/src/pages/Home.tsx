@@ -753,7 +753,7 @@ export default function Home() {
                   disabled={selected.soldOut}
                   onClick={() => setCheckoutOpen(true)}
                 >
-                  Proceed to M-Pesa STK Push <ArrowUpRight />
+                  Pay <ArrowUpRight />
                 </button>
                 <small className="secure-line">
                   <LockKeyhole /> Instant STK prompt · 100% Verified Entry
