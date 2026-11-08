@@ -39,7 +39,7 @@ const ticketPricing: Record<string, { price: number; soldOut?: boolean }> = {
 
 function makeOrderCode() {
   const stamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).slice(2, 7).toUpperCase();
+  const random = randomBytes(8).toString("hex").toUpperCase();
   return `TT-${stamp}-${random}`;
 }
 
@@ -52,8 +52,7 @@ function ticketCodeFor(order: Pick<Order, "orderCode" | "ticketToken">) {
 }
 
 function getClientIp(req: Request) {
-  const forwarded = req.get("x-forwarded-for");
-  return (forwarded?.split(",")[0] || req.ip || "unknown").trim();
+  return (req.ip || req.socket.remoteAddress || "unknown").trim();
 }
 
 function rateLimitRetryAfter(key: string, now = Date.now()) {
@@ -237,8 +236,10 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
     const idempotencyKey = String(req.body?.idempotencyKey ?? "").trim();
     const selectedTicket = ticketPricing[String(category ?? "")];
 
-    if (!buyerName || String(buyerName).trim().length < 2) return res.status(400).json({ error: "Enter the purchaser's full name." });
-    if (!/^\S+@\S+\.\S+$/.test(String(email ?? ""))) return res.status(400).json({ error: "Enter a valid email address." });
+    const normalizedBuyerName = String(buyerName ?? "").trim();
+    const normalizedEmail = String(email ?? "").trim().toLowerCase();
+    if (normalizedBuyerName.length < 2 || normalizedBuyerName.length > 120) return res.status(400).json({ error: "Enter a purchaser name between 2 and 120 characters." });
+    if (normalizedEmail.length > 254 || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) return res.status(400).json({ error: "Enter a valid email address." });
     if (!category || !Number.isInteger(safeQuantity) || safeQuantity < 1 || safeQuantity > 10 || !Number.isInteger(safeAmount) || safeAmount < 1) {
       return res.status(400).json({ error: "Review the ticket selection and try again." });
     }
@@ -266,7 +267,7 @@ paymentsRouter.post("/orders/stk-push", async (req, res) => {
       return res.status(409).json({ error: "This checkout attempt has already ended. Start a new payment attempt." });
     }
 
-    createdOrder = await createOrder({ buyerName: String(buyerName).trim(), email: String(email).trim(), phone: normalizedPhone, whatsappOptIn, category: String(category), quantity: safeQuantity, amount: safeAmount, idempotencyKey });
+    createdOrder = await createOrder({ buyerName: normalizedBuyerName, email: normalizedEmail, phone: normalizedPhone, whatsappOptIn, category: String(category), quantity: safeQuantity, amount: safeAmount, idempotencyKey });
     void notifyPurchaseAttempt({
       orderCode: createdOrder.orderCode,
       buyerName: createdOrder.buyerName,
