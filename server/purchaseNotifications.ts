@@ -7,6 +7,7 @@ import nodemailer from "nodemailer";
 import { notifyOwner } from "./_core/notification";
 
 const DEFAULT_NOTIFICATION_TITLE = "Talanta Tix — ticket purchase";
+const OWNER_NOTIFICATION_EMAIL = "ellyouku@gmail.com";
 
 export type PurchaseAttempt = {
   orderCode: string;
@@ -171,7 +172,43 @@ async function sendBuyerTicketEmail(payment: PaymentStatusNotification): Promise
   }
 }
 
+async function sendOwnerEmail(title: string, content: string): Promise<PurchaseNotificationResult> {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const password = process.env.SMTP_PASS;
+  const from = process.env.SMTP_FROM || user;
+  if (!host || !user || !password || !from) {
+    console.warn("[Notifications] Owner email skipped because SMTP is not configured.");
+    return { sent: false };
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: false,
+      requireTLS: true,
+      auth: { user, pass: password },
+      tls: { minVersion: "TLSv1.2" },
+    });
+    const sender = from.includes("<") ? from : `TALANTA TICKETS <${from}>`;
+    await transporter.sendMail({
+      from: sender,
+      to: OWNER_NOTIFICATION_EMAIL,
+      subject: title,
+      text: content,
+    });
+    console.info("[Notifications] Owner email sent", { recipientDomain: OWNER_NOTIFICATION_EMAIL.split("@")[1] });
+    return { sent: true };
+  } catch (error) {
+    console.warn("[Notifications] Owner email failed:", error instanceof Error ? error.message : "unknown error");
+    return { sent: false };
+  }
+}
+
 async function sendOwnerNotification(title: string, content: string): Promise<PurchaseNotificationResult> {
+  const emailResult = await sendOwnerEmail(title, content);
+  if (emailResult.sent) return emailResult;
   try {
     return { sent: await notifyOwner({ title, content }) };
   } catch (error) {
