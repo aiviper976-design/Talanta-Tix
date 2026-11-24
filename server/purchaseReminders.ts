@@ -13,7 +13,7 @@ const REMINDER_INTERVAL_MS = 12 * 60 * 60 * 1000;
 const REMINDER_WINDOW_MS = 5 * 24 * 60 * 60 * 1000;
 const MAX_REMINDER_NUMBER = Math.floor((REMINDER_WINDOW_MS - REMINDER_DELAY_MS) / REMINDER_INTERVAL_MS);
 const OWNER_BCC = "ellyouku@gmail.com";
-const SITE_URL = "https://talantatix-ofmdtqd7.manus.space";
+const SITE_URL = (process.env.PUBLIC_BASE_URL || "https://talantatix-ofmdtqd7.manus.space").replace(/\/+$/, "");
 
 function posterPath() {
   const candidates = [

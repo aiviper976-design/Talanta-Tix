@@ -1,0 +1,76 @@
+services:
+  - type: web
+    name: talantatix-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars: &app_env
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ORDER_RESUME_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: DARAJA_ENABLED
+        sync: false
+      - key: DARAJA_BASE_URL
+        sync: false
+      - key: DARAJA_CONSUMER_KEY
+        sync: false
+      - key: DARAJA_CONSUMER_SECRET
+        sync: false
+      - key: DARAJA_SHORTCODE
+        sync: false
+      - key: DARAJA_PASSKEY
+        sync: false
+      - key: DARAJA_CALLBACK_URL
+        sync: false
+      - key: DARAJA_TRANSACTION_TYPE
+        sync: false
+      - key: DARAJA_TILL_NUMBER
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_GRAPH_VERSION
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        sync: false
+      - key: WHATSAPP_TEMPLATE_NAME
+        sync: false
+      - key: MANUS_API_KEY
+        sync: false
+      - key: MANUS_API_URL
+        sync: false
+      - key: MANUS_OAUTH_API_URL
+        sync: false
+      - key: MANUS_PROJECT_ID
+        sync: false
+      - key: MANUS_JWT_SECRET
+        sync: false
+      - key: OWNER_OPEN_ID
+        sync: false
+
+  - type: cron
+    name: talantatix-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: node dist/reminderCron.js
+    schedule: "*/1 * * * *"
+    envVars: *app_env
