@@ -1,6 +1,7 @@
 services:
   - type: web
     name: talantatix-web
+    plan: free
     runtime: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
