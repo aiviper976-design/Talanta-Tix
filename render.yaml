@@ -66,11 +66,3 @@ services:
         sync: false
       - key: OWNER_OPEN_ID
         sync: false
-
-  - type: cron
-    name: talantatix-reminders
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerCommand: node dist/reminderCron.js
-    schedule: "*/1 * * * *"
-    envVars: *app_env
